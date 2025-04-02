@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import shutil
 import tempfile
 import argparse
@@ -8,6 +9,11 @@ import numpy as np
 import copy
 import PIL.Image
 from scipy.spatial.transform import Rotation
+import matplotlib.pyplot as pl
+
+MAST3R_REPO_PATH = "mast3r"
+sys.path.insert(0, MAST3R_REPO_PATH)
+
 
 import pycolmap
 import trimesh
@@ -26,6 +32,7 @@ from kapture.converter.colmap.database_extra import kapture_to_colmap
 from kapture.converter.colmap.database import COLMAPDatabase
 from mast3r.utils.misc import hash_md5
 
+
 # --- Helper Classes ---
 class GlomapRecon:
     def __init__(self, world_to_cam, intrinsics, points3d, imgs):
@@ -35,18 +42,22 @@ class GlomapRecon:
         self.imgs = imgs
 
 class GlomapReconState:
-    def __init__(self, glomap_recon, cache_dir, outfile_name, should_delete=False):
+    def __init__(self, glomap_recon, should_delete=False, cache_dir=None, outfile_name=None):
         self.glomap_recon = glomap_recon
         self.cache_dir = cache_dir
         self.outfile_name = outfile_name
         self.should_delete = should_delete
 
     def __del__(self):
-        if self.should_delete:
-            if self.cache_dir is not None and os.path.isdir(self.cache_dir):
-                shutil.rmtree(self.cache_dir)
-            if self.outfile_name is not None and os.path.isfile(self.outfile_name):
-                os.remove(self.outfile_name)
+        if not self.should_delete:
+            return
+        if self.cache_dir is not None and os.path.isdir(self.cache_dir):
+            shutil.rmtree(self.cache_dir)
+        self.cache_dir = None
+        if self.outfile_name is not None and os.path.isfile(self.outfile_name):
+            os.remove(self.outfile_name)
+        self.outfile_name = None
+
 
 # --- Modified Argument Parser ---
 def get_args_parser():
@@ -105,11 +116,11 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
 
     sim_matrix = None
     if 'retrieval' in scenegraph_type:
-        if retrieval_model is None:
-            raise Exception("retrieval_model must be provided for retrieval scenegraph")
+        assert retrieval_model is not None
         retriever = Retriever(retrieval_model, backbone=model, device=device)
         with torch.no_grad():
             sim_matrix = retriever(filelist)
+            
         del retriever
         torch.cuda.empty_cache()
 
@@ -119,8 +130,8 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
     cache_dir = outdir
     
     file_names = os.listdir(filelist)
+    file_names.sort()
     filelist = [os.path.join(filelist, filename) for filename in file_names]
-    print(filelist)
     
     root_path = os.path.commonpath(filelist)
     filelist_relpath = [os.path.relpath(filename, root_path).replace('\\', '/') for filename in filelist]
@@ -150,9 +161,10 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
 
     # Write pairs.txt and verify matches.
     pairs_txt = os.path.join(cache_dir, 'pairs.txt')
-    with open(pairs_txt, "w") as f:
-        for image_path1, image_path2 in colmap_image_pairs:
-            f.write(f"{image_path1} {image_path2}\n")
+    f = open(pairs_txt, "w")
+    for image_path1, image_path2 in colmap_image_pairs:
+        f.write("{} {}\n".format(image_path1, image_path2))
+    f.close()
     pycolmap.verify_matches(colmap_db_path, pairs_txt)
 
     reconstruction_path = os.path.join(cache_dir, "reconstruction")
@@ -167,11 +179,11 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
 
     colmap_world_to_cam = {}
     colmap_intrinsics = {}
+    colmap_image_id_to_name = {}
     images = {}
     num_reg_images = output_recon.num_reg_images()
     for idx, (colmap_imgid, colmap_image) in enumerate(output_recon.images.items()):
-        if idx >= num_reg_images:
-            break
+        colmap_image_id_to_name[colmap_imgid] = colmap_image.name
         if callable(colmap_image.cam_from_world.matrix):
             colmap_world_to_cam[colmap_imgid] = colmap_image.cam_from_world.matrix()
         else:
@@ -185,13 +197,16 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
         colmap_intrinsics[colmap_imgid] = K
         with PIL.Image.open(os.path.join(root_path, colmap_image.name)) as im:
             images[colmap_imgid] = np.asarray(im)
+        
+        if idx + 1 == num_reg_images:
+            break
 
     points3D = []
     num_points3D = output_recon.num_points3D()
     for idx, (pt3d_id, pts3d) in enumerate(output_recon.points3D.items()):
-        if idx >= num_points3D:
-            break
         points3D.append((pts3d.xyz, pts3d.color))
+        if idx + 1 == num_points3D:
+            break
     scene = GlomapRecon(colmap_world_to_cam, colmap_intrinsics, points3D, images)
     scene_state = GlomapReconState(scene, cache_dir, outfile_name)
     outfile = get_3D_model_from_scene(silent, scene_state, transparent_cams, cam_size)
@@ -218,7 +233,7 @@ def get_3D_model_from_scene(silent, scene_state, transparent_cams=False, cam_siz
         pose_c2w = np.linalg.inv(pose_w2c)
         cams2world.append(pose_c2w)
         add_scene_cam(scene, pose_c2w, camera_edge_color,
-                      None if not transparent_cams else recon.imgs[id],
+                      None if transparent_cams else recon.imgs[id],
                       focal, imsize=recon.imgs[id].shape[1::-1], screen_width=cam_size)
 
     rot = np.eye(4)
