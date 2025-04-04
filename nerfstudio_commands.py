@@ -63,7 +63,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         "ns-export",
         "gaussian-splat",
         "--load-config",
-        f"{model_output_path}/config.yaml",
+        f"{final_config_file_path}",
         "--output-dir",
         f"{output_path}/model",
     ]
