@@ -14,7 +14,9 @@ def run_command(command):
             if "Training Finished" in line:
                 print("Training finished.")
             match = re.search(r"Config File\s*\|\s*(.+)", line)
-            if match:
+            if "Config File" in line:
+                print("Config file found.")
+                print(line)
                 config_file_path = match.group(1).strip()
                 print(f"Config file path: {config_file_path}")
                 time.sleep(2)  # Optional wait time
@@ -25,7 +27,7 @@ def run_command(command):
         print(f"Command failed: {' '.join(command)}")
         sys.exit(process.returncode)
 
-def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, verbose=False):
+def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, max_num_iterations = 30000, verbose=False):
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
@@ -50,7 +52,11 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     time.sleep(2)  # Optionally wait a bit
 
     # Step 2: Train using splatfacto
-    train_cmd = ["ns-train", "splatfacto", "--data", output_path]
+    model_output_path = f"{output_path}/export"
+    train_cmd = ["ns-train", "splatfacto", "--data", output_path, "--output-dir", model_output_path, "--viewer.quit-on-train-completion", "True"]
+    if max_num_iterations != 30000:
+        train_cmd.append("--max-num-iterations")
+        train_cmd.append(str(max_num_iterations))
     run_command(train_cmd)
     
     #Step 3: export final .ply
@@ -58,7 +64,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         "ns-export",
         "gaussian-splat",
         "--load-config",
-        f"{output_path}",
+        f"{model_output_path}/config.yaml",
         "--output-dir",
         f"{output_path}/exports/splat/",
     ]
@@ -74,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=str, required=True, help="Directory for processed data.")
     parser.add_argument("--colmap-model-path", type=str, help="Path to the COLMAP model directory.")
     parser.add_argument("--skip-colmap", action="store_true", help="Skip COLMAP processing.")
+    parser.add_argument("--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output.")
     args = parser.parse_args()
-    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.verbose)
+    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.max_num_iterations, args.verbose)
