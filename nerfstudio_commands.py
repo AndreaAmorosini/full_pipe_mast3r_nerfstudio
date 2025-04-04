@@ -54,8 +54,8 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     
     config_file_path = f"{model_output_path}"
     config_file_path_1 = os.listdir(config_file_path)[0]
-    config_file_path_2 = os.listdir(config_file_path_1)[0]
-    config_file_path_3 = os.listdir(config_file_path_2)[0]
+    config_file_path_2 = os.listdir(config_file_path + "/" + config_file_path_1)[0]
+    config_file_path_3 = os.listdir(config_file_path + "/" + config_file_path_1 + "/" + config_file_path_2)[0]
     final_config_file_path = os.path.join(config_file_path, config_file_path_1, config_file_path_2, config_file_path_3, "config.yml")
     
     #Step 3: export final .ply
