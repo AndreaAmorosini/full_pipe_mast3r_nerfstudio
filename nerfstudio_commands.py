@@ -23,11 +23,11 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     ]
     
     if skip_colmap:
-        process_data_cmd.append("--skip-colmap")
+        process_data_cmd.append(" --skip-colmap")
     if colmap_model_path:
-        process_data_cmd.append(["--colmap-model-path", colmap_model_path])
+        process_data_cmd.append([" --colmap-model-path", colmap_model_path])
     if verbose:
-        process_data_cmd.append("--verbose")
+        process_data_cmd.append(" --verbose")
     
     run_command(process_data_cmd)
 
