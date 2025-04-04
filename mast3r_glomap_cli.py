@@ -11,7 +11,7 @@ import PIL.Image
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as pl
 
-MAST3R_REPO_PATH = "submodules/mast3r"
+MAST3R_REPO_PATH = "submodules"
 sys.path.insert(0, MAST3R_REPO_PATH)
 
 
