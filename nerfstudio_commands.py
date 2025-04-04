@@ -3,26 +3,19 @@ import sys
 import time
 import argparse
 import re
+import os
 
 config_file_path = ""
 
 def run_command(command):
     print(f"Running command: {' '.join(command)}")
-    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1) as process:
-        for line in process.stdout:
-            print(line, end="")
-            if "Training Finished" in line:
-                print("Training finished.")
-            match = re.search(r"Config File\s*\|\s*(.+)", line)
-            if "Config File" in line:
-                print("Config file found.")
-                print(line)
-                config_file_path = match.group(1).strip()
-                print(f"Config file path: {config_file_path}")
-                time.sleep(2)  # Optional wait time
-                process.terminate()
-                break
-        process.wait()
+    process = subprocess.run(command)
+    # with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1) as process:
+    #     for line in process.stdout:
+    #         print(line, end="")
+    #         if "Training Finished" in line:
+    #             print("Training finished.")
+    #     process.wait()
     if process.returncode != 0:
         print(f"Command failed: {' '.join(command)}")
         sys.exit(process.returncode)
@@ -59,6 +52,12 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         train_cmd.append(str(max_num_iterations))
     run_command(train_cmd)
     
+    config_file_path = f"{model_output_path}"
+    config_file_path_1 = os.listdir(config_file_path)[0]
+    config_file_path_2 = os.listdir(config_file_path)[0]
+    config_file_path_3 = os.listdir(config_file_path)[0]
+    final_config_file_path = os.path.join(config_file_path, config_file_path_1, config_file_path_2, config_file_path_3, "config.yml")
+    
     #Step 3: export final .ply
     export_cmd = [
         "ns-export",
@@ -66,7 +65,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         "--load-config",
         f"{model_output_path}/config.yaml",
         "--output-dir",
-        f"{output_path}/exports/splat/",
+        f"{output_path}/model",
     ]
     run_command(export_cmd)
     print(".ply exported to", f"{output_path}/exports/splat/")
