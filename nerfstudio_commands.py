@@ -11,7 +11,7 @@ def run_command(command):
         print(f"Command failed: {' '.join(command)}")
         sys.exit(process.returncode)
 
-def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False):
+def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, verbose=False):
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
@@ -22,7 +22,8 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         output_path,
         "--skip-colmap" if skip_colmap else "",
         "--colmap-model-path" if colmap_model_path else "",
-        colmap_model_path if colmap_model_path else ""
+        colmap_model_path if colmap_model_path else "",
+        "--verbose" if verbose else "",
     ]
     
     run_command(process_data_cmd)
@@ -43,5 +44,6 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=str, required=True, help="Directory for processed data.")
     parser.add_argument("--colmap-model-path", type=str, help="Path to the COLMAP model directory.")
     parser.add_argument("--skip-colmap", action="store_true", help="Skip COLMAP processing.")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output.")
     args = parser.parse_args()
-    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap)
+    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.verbose)
