@@ -44,4 +44,4 @@ if __name__ == "__main__":
     parser.add_argument("--colmap-model-path", type=str, help="Path to the COLMAP model directory.")
     parser.add_argument("--skip-colmap", action="store_true", help="Skip COLMAP processing.")
     args = parser.parse_args()
-    invoke_command(args.data_path, args.output_dir)
+    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap)

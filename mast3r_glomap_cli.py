@@ -167,7 +167,7 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
     f.close()
     pycolmap.verify_matches(colmap_db_path, pairs_txt)
 
-    reconstruction_path = os.path.join(cache_dir, "reconstruction")
+    reconstruction_path = os.path.join(cache_dir, "colmap", "sparse")
     if os.path.isdir(reconstruction_path):
         shutil.rmtree(reconstruction_path)
     os.makedirs(reconstruction_path, exist_ok=True)
@@ -209,8 +209,8 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
             break
     scene = GlomapRecon(colmap_world_to_cam, colmap_intrinsics, points3D, images)
     scene_state = GlomapReconState(scene, cache_dir, outfile_name)
-    outfile = get_3D_model_from_scene(silent, scene_state, transparent_cams, cam_size)
-    return scene_state, outfile
+    # outfile = get_3D_model_from_scene(silent, scene_state, transparent_cams, cam_size)
+    return scene_state, outfile_name
 
 def get_3D_model_from_scene(silent, scene_state, transparent_cams=False, cam_size=0.05):
     if scene_state is None:
@@ -273,7 +273,6 @@ def main_cli():
         scenegraph_type=args.scenegraph_type, winsize=args.winsize,
         win_cyclic=args.win_cyclic, refid=args.refid, shared_intrinsics=args.shared_intrinsics
     )
-    print("3D model exported to:", outfile)
 
 if __name__ == '__main__':
     main_cli()
