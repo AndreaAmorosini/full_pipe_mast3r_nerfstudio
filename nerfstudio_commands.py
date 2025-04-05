@@ -24,7 +24,8 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
-        "images",  # change to "images" if processing images
+        "images",
+        "--gpu", 
         "--data",
         input_path,
         "--output-dir",
@@ -79,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=str, required=True, help="Directory for processed data.")
     parser.add_argument("--colmap-model-path", type=str, help="Path to the COLMAP model directory.")
     parser.add_argument("--skip-colmap", action="store_true", help="Skip COLMAP processing.")
+    parser.add_argument("--num-downscales", type=int, default=8, help="Number of downscales for processing.")
     parser.add_argument("--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output.")
     args = parser.parse_args()

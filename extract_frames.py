@@ -37,7 +37,6 @@ def invoke_command(
     time.sleep(2)  # Optionally wait a bit
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Nerfstudio commands.")
     parser.add_argument(
@@ -47,7 +46,7 @@ if __name__ == "__main__":
         "--output-dir", type=str, required=True, help="Directory for processed data."
     )
     parser.add_argument(
-        "--frame-count", type=str, help="Path to the COLMAP model directory."
+        "--frame-count", type=int, help="Number of frames to extract and use"
     )
     args = parser.parse_args()
     invoke_command(

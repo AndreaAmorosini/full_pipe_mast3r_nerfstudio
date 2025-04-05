@@ -56,6 +56,17 @@ if __name__ == "__main__":
         "--frame-count", type=str, help="Path to the COLMAP model directory."
     )
     parser.add_argument(
+        "--skip-colmap", action="store_true", help="Skip COLMAP processing."
+    )
+    parser.add_argument(
         "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
     )
     args = parser.parse_args()
+    
+    full_pipe(
+        video_path=args.video_path,
+        frame_output_dir=args.output_dir,
+        frame_count=args.frame_count,
+        skip_colmap=args.skip_colmap,
+        max_num_iterations=args.max_num_iterations,
+    )
