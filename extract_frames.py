@@ -28,7 +28,7 @@ def invoke_command(
     process_data_cmd = [
         "sfextract",
         video_path,  
-        "--frame_count",
+        "--frame-count",
         frame_count,
         "--output",
         output_path,
