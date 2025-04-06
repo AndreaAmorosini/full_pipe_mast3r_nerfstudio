@@ -28,7 +28,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
     frame_extract_cmd = [
         "sfextract",
         video_path,  
-        "--frame_count",
+        "--frame-count",
         frame_count,
         "--output",
         frame_output_dir,
