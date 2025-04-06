@@ -16,7 +16,10 @@ def run_command(command):
 
 
 def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000):
-    
+    print("Starting full pipeline...")
+    print(f"Video path: {video_path}")
+    print(f"Output path: {frame_output_dir}")
+    print(f"Frame count: {frame_count}")
     # Check if the output directory exists, if not create it
     if not os.path.exists(frame_output_dir):
         os.makedirs(frame_output_dir)
