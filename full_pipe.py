@@ -22,7 +22,16 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         os.makedirs(frame_output_dir)
     
     # Step 1: Extract frames from video
-    extract_frames.invoke_command(video_path, frame_output_dir, frame_count)
+    frame_extract_cmd = [
+        "sfextract",
+        video_path,  
+        "--frame_count",
+        frame_count,
+        "--output",
+        frame_output_dir,
+    ]
+    run_command(frame_extract_cmd)
+    # extract_frames.invoke_command(video_path, frame_output_dir, frame_count)
 
     # Step 2: Process the data with Mast3r
     mast3r_output_dir = frame_output_dir.split("/input")[0]
@@ -47,7 +56,22 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
     time.sleep(2)  # Optionally wait a bit
     
     # Step 3: Process the data and train with nerfstudio
-    nerfstudio_commands.invoke_command(frame_output_dir, mast3r_output_dir, colmap_model_path="colmap/sparse/0", skip_colmap=True, max_num_iterations=max_num_iterations)
+    # nerfstudio_commands.invoke_command(frame_output_dir, mast3r_output_dir, colmap_model_path="colmap/sparse/0", skip_colmap=True, max_num_iterations=max_num_iterations)
+    nerfstudio_cmd = [
+        "python",
+        "nerfstudio_commands.py",
+        "--data-path",
+        mast3r_output_dir,
+        "--output-dir",
+        f"{mast3r_output_dir}/export",
+        "--colmap-model-path",
+        "colmap/sparse/0",
+        "--skip-colmap",
+        "--max-num-iterations",
+        max_num_iterations,        
+    ]
+    run_command(nerfstudio_cmd)
+    print("Nerfstudio processing complete.")
 
 
 if __name__ == "__main__":

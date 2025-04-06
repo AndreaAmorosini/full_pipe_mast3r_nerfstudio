@@ -21,6 +21,9 @@ def invoke_command(
     output_path,
     frame_count=5,
 ):
+    print(f"Video path: {video_path}")
+    print(f"Output path: {output_path}")
+    print(f"Frame count: {frame_count}")
     # Step 1: Process the data
     process_data_cmd = [
         "sfextract",
@@ -38,7 +41,7 @@ def invoke_command(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Nerfstudio commands.")
+    parser = argparse.ArgumentParser(description="Run Frame Extraction.")
     parser.add_argument(
         "--video-path", type=str, required=True, help="Path to the raw data."
     )
