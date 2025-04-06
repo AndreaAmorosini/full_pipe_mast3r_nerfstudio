@@ -8,7 +8,7 @@ import sys
 import time
 
 def run_command(command):
-    print(f"Running command: {' '.join(command)}")
+    print(f"Running command: {' '.join(str(command))}")
     process = subprocess.run(command)
     if process.returncode != 0:
         print(f"Command failed: {' '.join(command)}")
