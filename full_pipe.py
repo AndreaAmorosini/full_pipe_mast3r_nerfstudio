@@ -8,7 +8,7 @@ import sys
 import time
 
 def run_command(command):
-    print(f"Running command: {' '.join(str(command))}")
+    print(f"Running command: {' '.join(command)}")
     process = subprocess.run(command)
     if process.returncode != 0:
         print(f"Command failed: {' '.join(command)}")
@@ -51,7 +51,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         "--scenegraph_type",
         "swin",
         "--winsize",
-        15,
+        str(15),
         "--win_cyclic",
     ]
     run_command(mast3r_glomap_command)
@@ -71,7 +71,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         "colmap/sparse/0",
         "--skip-colmap",
         "--max-num-iterations",
-        max_num_iterations,        
+        str(max_num_iterations),        
     ]
     run_command(nerfstudio_cmd)
     print("Nerfstudio processing complete.")
