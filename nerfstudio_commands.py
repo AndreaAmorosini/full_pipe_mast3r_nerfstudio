@@ -10,12 +10,6 @@ config_file_path = ""
 def run_command(command):
     print(f"Running command: {' '.join(command)}")
     process = subprocess.run(command)
-    # with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1) as process:
-    #     for line in process.stdout:
-    #         print(line, end="")
-    #         if "Training Finished" in line:
-    #             print("Training finished.")
-    #     process.wait()
     if process.returncode != 0:
         print(f"Command failed: {' '.join(command)}")
         sys.exit(process.returncode)

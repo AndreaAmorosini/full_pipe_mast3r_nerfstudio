@@ -16,11 +16,17 @@ def run_command(command):
 
 
 def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000):
+    
+    # Check if the output directory exists, if not create it
+    if not os.path.exists(frame_output_dir):
+        os.makedirs(frame_output_dir)
+    
     # Step 1: Extract frames from video
     extract_frames.invoke_command(video_path, frame_output_dir, frame_count)
 
     # Step 2: Process the data with Mast3r
-    mast3r_output_dir = frame_output_dir.split("/input")[1]
+    mast3r_output_dir = frame_output_dir.split("/input")[0]
+    print(f"Output directory for Mast3r: {mast3r_output_dir}")
     mast3r_glomap_command = [
         "python",
         "mast3r_glomap_cli.py",
