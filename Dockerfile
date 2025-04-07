@@ -133,6 +133,7 @@ RUN export GIT_TERMINAL_PROMPT=0 && \
     GSPLAT_VERSION="$(sed -n 's/.*gsplat==\s*\([^," '"'"']*\).*/\1/p' /tmp/nerfstudio/pyproject.toml)" && \
     pip install --no-cache-dir git+https://github.com/nerfstudio-project/gsplat.git@v${GSPLAT_VERSION} && \
     pip install --no-cache-dir /tmp/nerfstudio 'numpy<2.0.0' && \
+    pip install --no-cache-dir git+https://github.com/KevinXu02/splatfacto-w && \
     rm -rf /tmp/nerfstudio
 
 # ------------------------------------------------------------------------
