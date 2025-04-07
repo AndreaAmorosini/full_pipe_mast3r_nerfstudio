@@ -1,11 +1,9 @@
 import os
-import extract_frames
-import nerfstudio_commands
-import mast3r_glomap_cli
 import argparse
 import subprocess
 import sys
 import time
+import shutil
 
 def run_command(command):
     print(f"Running command: {' '.join(command)}")
@@ -15,7 +13,7 @@ def run_command(command):
         sys.exit(process.returncode)
 
 
-def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000):
+def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000, start_over=False):
     print("Starting full pipeline...")
     print(f"Video path: {video_path}") #data/data_source/camera.MP4
     print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/input
@@ -23,6 +21,33 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
     # Check if the output directory exists, if not create it
     if not os.path.exists(frame_output_dir):
         os.makedirs(frame_output_dir)
+        
+    skip_frame_extraction = False
+    skip_mast3r_processing = False
+    
+    #Check for existing file
+    if os.path.exists(frame_output_dir):
+        #Check for images in the folder
+        if len(os.listdir(frame_output_dir)) > 0:
+            print(f"Output directory {frame_output_dir} already exists and is not empty.")
+            if start_over:
+                #Clean all content
+                print(f"Deleting all content in {frame_output_dir} as start_over is True.")
+                for filename in os.listdir(frame_output_dir):
+                    file_path = os.path.join(frame_output_dir, filename)
+                    try:
+                        if os.path.isfile(file_path) or os.path.islink(file_path):
+                            os.unlink(file_path)
+                        elif os.path.isdir(file_path):
+                            shutil.rmtree(file_path)
+                    except Exception as e:
+                        print(f'Failed to delete {file_path}. Reason: {e}')
+            else:
+                print(f"Frames already present in {frame_output_dir} skipping frame extraction")
+                skip_frame_extraction = True
+                
+        else:
+            print(f"Output directory {frame_output_dir} exists but is empty. Continuing.")
     
     # Step 1: Extract frames from video
     frame_extract_cmd = [
@@ -33,12 +58,29 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         "--output",
         frame_output_dir,
     ]
-    run_command(frame_extract_cmd)
-    # extract_frames.invoke_command(video_path, frame_output_dir, frame_count)
+    if skip_frame_extraction is False:
+        run_command(frame_extract_cmd)
 
     # Step 2: Process the data with Mast3r
     mast3r_output_dir = frame_output_dir.split("/input")[0] # outputs/full_pipe/camera
     print(f"Output directory for Mast3r: {mast3r_output_dir}")
+    
+    #Check if exist colmap/sparse/0 and its content made up of three files
+    colmap_dir = os.path.join(mast3r_output_dir, "colmap", "sparse", "0")
+    if os.path.exists(colmap_dir):
+        #Check if there are three files with dimensions > 1KB
+        colmap_files = os.listdir(colmap_dir)
+        colmap_files = [f for f in colmap_files if os.path.isfile(os.path.join(colmap_dir, f)) and os.path.getsize(os.path.join(colmap_dir, f)) > 1024]
+        if len(colmap_files) == 3:
+            print(f"Colmap results directory {colmap_dir} already exists and contains valid files.")
+            if start_over:
+                #Delete colmap/sparse/0
+                print(f"Deleting colmap results directory {colmap_dir} as start_over is True.")
+                shutil.rmtree(colmap_dir)
+            else:
+                print(f"Colmap results directory {colmap_dir} already exists and contains valid files. Skipping Mast3r processing.")
+                skip_mast3r_processing = True
+    
     mast3r_glomap_command = [
         "python",
         "mast3r_glomap_cli.py",
@@ -54,12 +96,28 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         str(15),
         "--win_cyclic",
     ]
-    run_command(mast3r_glomap_command)
+    if skip_mast3r_processing is False:
+        run_command(mast3r_glomap_command)
+        
     print("Data processing complete.")
     time.sleep(2)  # Optionally wait a bit
     
+    #Check if transform.json is already present in the directory
+    transform_json_path = os.path.join(mast3r_output_dir, "transform.json")
+    if os.path.exists(transform_json_path):
+        print(f"Transform.json already exists in {mast3r_output_dir}. Proceeding to delete old files")
+        #Delete transform.json
+        os.remove(transform_json_path)
+        os.remove(os.path.join(mast3r_output_dir, "sparse_pc.ply"))
+        #Delete images, images_2, images_4, and images_8 folders
+        for folder in ["images", "images_2", "images_4", "images_8", "export", "models"]:
+            folder_path = os.path.join(mast3r_output_dir, folder)
+            if os.path.exists(folder_path):
+                shutil.rmtree(folder_path)
+    else:
+        print(f"Transform.json does not exist in {mast3r_output_dir}. Proceeding with nerfstudio processing.")
+    
     # Step 3: Process the data and train with nerfstudio
-    # nerfstudio_commands.invoke_command(frame_output_dir, mast3r_output_dir, colmap_model_path="colmap/sparse/0", skip_colmap=True, max_num_iterations=max_num_iterations)
     nerfstudio_cmd = [
         "python",
         "nerfstudio_commands.py",
@@ -78,7 +136,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Nerfstudio commands.")
+    parser = argparse.ArgumentParser(description="Run Complete Gaussian Splatting pipeline.")
     parser.add_argument(
         "--video-path", type=str, required=True, help="Path to the raw data."
     )
@@ -94,6 +152,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
     )
+    parser.add_argument(
+        "--start-over", type="store_true", help="Start over the pipeline."
+    )
     args = parser.parse_args()
     
     full_pipe(
@@ -102,4 +163,5 @@ if __name__ == "__main__":
         frame_count=args.frame_count,
         skip_colmap=args.skip_colmap,
         max_num_iterations=args.max_num_iterations,
+        start_over=args.start_over,
     )

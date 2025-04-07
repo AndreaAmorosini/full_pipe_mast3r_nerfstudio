@@ -60,10 +60,10 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         "--load-config",
         f"{final_config_file_path}",
         "--output-dir",
-        f"{output_path}/model",
+        f"{output_path}/splat",
     ]
     run_command(export_cmd)
-    print(".ply exported to", f"{output_path}/exports/splat/")
+    print(".ply exported to", f"{output_path}/splat")
     
     print("Pipe complete.")
 
