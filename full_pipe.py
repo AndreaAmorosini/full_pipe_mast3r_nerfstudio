@@ -153,7 +153,7 @@ if __name__ == "__main__":
         "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
     )
     parser.add_argument(
-        "--start-over", type="store_true", help="Start over the pipeline."
+        "--start-over", type=bool, default=False, help="Start over the pipeline."
     )
     args = parser.parse_args()
     
