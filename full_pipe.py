@@ -17,8 +17,8 @@ def run_command(command):
 
 def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000):
     print("Starting full pipeline...")
-    print(f"Video path: {video_path}")
-    print(f"Output path: {frame_output_dir}")
+    print(f"Video path: {video_path}") #data/data_source/camera.MP4
+    print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/input
     print(f"Frame count: {frame_count}")
     # Check if the output directory exists, if not create it
     if not os.path.exists(frame_output_dir):
@@ -37,7 +37,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
     # extract_frames.invoke_command(video_path, frame_output_dir, frame_count)
 
     # Step 2: Process the data with Mast3r
-    mast3r_output_dir = frame_output_dir.split("/input")[0]
+    mast3r_output_dir = frame_output_dir.split("/input")[0] # outputs/full_pipe/camera
     print(f"Output directory for Mast3r: {mast3r_output_dir}")
     mast3r_glomap_command = [
         "python",
@@ -64,14 +64,14 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         "python",
         "nerfstudio_commands.py",
         "--data-path",
-        mast3r_output_dir,
+        frame_output_dir,
         "--output-dir",
-        f"{mast3r_output_dir}/export",
+        f"{mast3r_output_dir}",
         "--colmap-model-path",
         "colmap/sparse/0",
         "--skip-colmap",
         "--max-num-iterations",
-        str(max_num_iterations),        
+        str(max_num_iterations),
     ]
     run_command(nerfstudio_cmd)
     print("Nerfstudio processing complete.")
