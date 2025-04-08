@@ -55,19 +55,38 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
             print(f"Output directory {frame_output_dir} exists but is empty. Continuing.")
     
     # Step 1: Extract frames from video
+    # frame_extract_cmd = [
+    #     "sfextract",
+    #     video_path,  
+    #     "--frame-count",
+    #     frame_count,
+    #     "--output",
+    #     frame_output_dir,
+    # ]
+    
     frame_extract_cmd = [
-        "sfextract",
-        video_path,  
-        "--frame-count",
-        frame_count,
-        "--output",
+        "python",
+        "nerfstudio_commands.py",
+        "--data-path",
+        video_path,
+        "--output-dir",
         frame_output_dir,
+        "--frame-count",
+        str(frame_count),
+        "--frame-extraction",
     ]
     if skip_frame_extraction is False and only_nerfstudio is False:
         run_command(frame_extract_cmd)
 
+
     # Step 2: Process the data with Mast3r
     mast3r_output_dir = frame_output_dir.split("/input")[0] # outputs/full_pipe/camera
+    #Search for a folder named images and rename it to input
+    images_dir = os.path.join(frame_output_dir, "images")
+    if os.path.exists(images_dir):
+        new_images_dir = os.path.join(frame_output_dir, "input")
+        os.rename(images_dir, new_images_dir)
+        print(f"Renamed {images_dir} to {new_images_dir}")
     print(f"Output directory for Mast3r: {mast3r_output_dir}")
     
     #Check if exist colmap/sparse/0 and its content made up of three files

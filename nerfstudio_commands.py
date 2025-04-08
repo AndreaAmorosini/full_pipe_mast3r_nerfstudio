@@ -100,11 +100,30 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     
     print("Pipe complete.")
 
+def frame_extraction_command(input_path, output_path, frame_count):
+    extract_cmd = [
+        "ns-process-data",
+        "video",
+        "--data",
+        input_path,
+        "--output-dir",
+        output_path,
+        "--num-frames-target",
+        str(frame_count),
+        "--gpu",
+        "--skip-colmap",
+        "--num-downscales",
+        "0",
+    ]
+    run_command(extract_cmd)
+    print("Frames extracted.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Nerfstudio commands.")
     parser.add_argument("--data-path", type=str, required=True, help="Path to the raw data.")
     parser.add_argument("--output-dir", type=str, required=True, help="Directory for processed data.")
+    parser.add_argument("--frame-extraction", action="store_true", help="Enable frame extraction.")
+    parser.add_argument("--frame-count", type=int, default=3000, help="Number of frames to extract.")
     parser.add_argument("--colmap-model-path", type=str, help="Path to the COLMAP model directory.")
     parser.add_argument("--skip-colmap", action="store_true", help="Skip COLMAP processing.")
     parser.add_argument("--num-downscales", type=int, default=8, help="Number of downscales for processing.")
@@ -113,4 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w", "splatfacto-w-light"], help="Model type to use for training.")
     parser.add_argument("--advanced", action="store_true", help="Enable advanced settings for training.")
     args = parser.parse_args()
-    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.max_num_iterations, args.verbose, args.model, args.advanced)
+    if args.frame_extraction:
+        frame_extraction_command(args.data_path, args.output_dir.split("/input")[0], args.frame_count)
+    else:
+        invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.max_num_iterations, args.verbose, args.model, args.advanced)
