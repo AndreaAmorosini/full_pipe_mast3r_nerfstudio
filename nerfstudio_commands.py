@@ -51,7 +51,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
             "--pipeline.model.cull-alpha-thresh", "0.005",
             "--pipeline.model.use-scale-regularization", "True",
             "--pipeline.model.use-bilateral-grid", "True",
-            "--mixed-precision", "True",
+            # "--mixed-precision", "True",
             "--pipeline.datamanager.train-cameras-sampling-strategy", "fps",
             "--pipeline.model.camera-optimizer.mode", "SO3xR3",
             "--pipeline.model.color-corrected-metrics", "True",
