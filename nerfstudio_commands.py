@@ -46,7 +46,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         train_cmd.append("--max-num-iterations")
         train_cmd.append(str(max_num_iterations))
 
-    if advanced:
+    if advanced and (model != "splatfacto-w" or model != "splatfacto-w-light"):
         train_cmd.extend([
             "--pipeline.model.cull-alpha-thresh", "0.005",
             "--pipeline.model.use-scale-regularization", "True",
@@ -55,6 +55,12 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
             "--pipeline.datamanager.train-cameras-sampling-strategy", "fps",
             "--pipeline.model.camera-optimizer.mode", "SO3xR3",
             "--pipeline.model.color-corrected-metrics", "True",
+        ])
+    elif advanced and (model == "splatfacto-w" or model == "splatfacto-w-light"):
+        train_cmd.extend([
+            "--pipeline.model.cull-alpha-thresh", "0.005",
+            "--pipeline.model.use-scale-regularization", "True",
+            "--pipeline.model.camera-optimizer.mode", "SO3xR3",
         ])
     # --pipeline.model.cull-alpha-thresh FLOAT :threshold of opacity for culling gaussians. One can set it to a lower value (e.g. 0.005) for higher quality. (default: 0.1)
     # --pipeline.model.use-scale-regularization {True,False}: If enabled, a scale regularization introduced in PhysGauss (https://xpandora.github.io/PhysGaussian/) is used for reducing huge spikey gaussians. (default: False)
