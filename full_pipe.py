@@ -185,7 +185,7 @@ if __name__ == "__main__":
         "--start-over", type=bool, default=False, help="Start over the pipeline."
     )
     parser.add_argument(
-        "--only-nerfstudio", action=bool, help="Use only nerfstudio for the entire pipeline"
+        "--only-nerfstudio", type=bool, default=False, help="Use only nerfstudio for the entire pipeline"
     )
     parser.add_argument(
         "--advanced-training", action="store_true", help="Enable advanced settings for training."
