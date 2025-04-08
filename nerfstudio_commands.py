@@ -14,7 +14,7 @@ def run_command(command):
         print(f"Command failed: {' '.join(command)}")
         sys.exit(process.returncode)
 
-def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, max_num_iterations = 30000, verbose=False, model="splatfacto"):	
+def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, max_num_iterations = 30000, verbose=False, model="splatfacto", advanced=True):	
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
@@ -46,20 +46,30 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         train_cmd.append("--max-num-iterations")
         train_cmd.append(str(max_num_iterations))
 
-        # --pipeline.model.cull-alpha-thresh FLOAT :threshold of opacity for culling gaussians. One can set it to a lower value (e.g. 0.005) for higher quality. (default: 0.1)
-        # --pipeline.model.use-scale-regularization {True,False}: If enabled, a scale regularization introduced in PhysGauss (https://xpandora.github.io/PhysGaussian/) is used for reducing huge spikey gaussians. (default: False)
-        # --pipeline.model.use-bilateral-grid {True,False}: If True, use bilateral grid to handle the ISP changes in the image space. This technique was introduced in the paper 'Bilateral Guided Radiance Field Processing' (https://bilarfpro.github.io/). (default:False)
-        # --pipeline.model.strategy {default,mcmc}: The default strategy will be used if strategy is not specified. Other strategies, e.g. mcmc, can be used. (default: default)
-        # --pipeline.model.noise-lr FLOAT: MCMC samping noise learning rate. Default to 5e5. (default:500000.0)
-        # --pipeline.model.mcmc-opacity-reg FLOAT: Regularization term for opacity in MCMC strategy.(default: 0.01)
-        # --pipeline.model.mcmc-scale-reg FLOAT: Regularization term for scale in MCMC strategy.(default: 0.01)
-        # --mixed-precision {True,False}: Whether or not to use mixed precision for training. (default: False)
-        # --pipeline.datamanager.cache-images {cpu,gpu,disk}: Where to cache images in memory. (default: gpu)
-        # --pipeline.datamanager.train-cameras-sampling-strategy {random,fps}: Specifies which sampling strategy is used to generate train cameras,'random' means sampling uniformly random without replacement, 'fps' means farthest point sampling which is helpful to reduce the artifact due to oversampling subsets of cameras that are very close to each other. (default: random)
-        # --pipeline.model.camera-optimizer.mode {off,SO3xR3,SE3}: Pose optimization strategy to use. If enabled, we recommend SO3xR3. (default: off)
-        # --pipeline.model.num-downscales INT: at the beginning, resolution is 1/2^d, where d is this number (default: 2)
-        # --pipeline.model.output-depth-during-training {True,False}: If True, output depth during training. Otherwise, only output depth during evaluation. (default: False)
-        # --pipeline.model.color-corrected-metrics {True,False}: If True, apply color correction to the rendered images before computing the metrics. (default: False)
+    if advanced:
+        train_cmd.extend([
+            "--pipeline.model.cull-alpha-thresh", "0.005",
+            "--pipeline.model.use-scale-regularization", "True",
+            "--pipeline.model.use-bilateral-grid", "True",
+            "--mixed-precision", "True",
+            "--pipeline.datamanager.train-cameras-sampling-strategy", "fps",
+            "--pipeline.model.camera-optimizer.mode", "SO3xR3",
+            "--pipeline.model.color-corrected-metrics", "True",
+        ])
+    # --pipeline.model.cull-alpha-thresh FLOAT :threshold of opacity for culling gaussians. One can set it to a lower value (e.g. 0.005) for higher quality. (default: 0.1)
+    # --pipeline.model.use-scale-regularization {True,False}: If enabled, a scale regularization introduced in PhysGauss (https://xpandora.github.io/PhysGaussian/) is used for reducing huge spikey gaussians. (default: False)
+    # --pipeline.model.use-bilateral-grid {True,False}: If True, use bilateral grid to handle the ISP changes in the image space. This technique was introduced in the paper 'Bilateral Guided Radiance Field Processing' (https://bilarfpro.github.io/). (default:False)
+    # --pipeline.model.strategy {default,mcmc}: The default strategy will be used if strategy is not specified. Other strategies, e.g. mcmc, can be used. (default: default)
+    # --pipeline.model.noise-lr FLOAT: MCMC samping noise learning rate. Default to 5e5. (default:500000.0)
+    # --pipeline.model.mcmc-opacity-reg FLOAT: Regularization term for opacity in MCMC strategy.(default: 0.01)
+    # --pipeline.model.mcmc-scale-reg FLOAT: Regularization term for scale in MCMC strategy.(default: 0.01)
+    # --mixed-precision {True,False}: Whether or not to use mixed precision for training. (default: False)
+    # --pipeline.datamanager.cache-images {cpu,gpu,disk}: Where to cache images in memory. (default: gpu)
+    # --pipeline.datamanager.train-cameras-sampling-strategy {random,fps}: Specifies which sampling strategy is used to generate train cameras,'random' means sampling uniformly random without replacement, 'fps' means farthest point sampling which is helpful to reduce the artifact due to oversampling subsets of cameras that are very close to each other. (default: random)
+    # --pipeline.model.camera-optimizer.mode {off,SO3xR3,SE3}: Pose optimization strategy to use. If enabled, we recommend SO3xR3. (default: off)
+    # --pipeline.model.num-downscales INT: at the beginning, resolution is 1/2^d, where d is this number (default: 2)
+    # --pipeline.model.output-depth-during-training {True,False}: If True, output depth during training. Otherwise, only output depth during evaluation. (default: False)
+    # --pipeline.model.color-corrected-metrics {True,False}: If True, apply color correction to the rendered images before computing the metrics. (default: False)
         
 
     run_command(train_cmd)
