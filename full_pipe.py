@@ -150,7 +150,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
             "--skip-colmap",
             "--max-num-iterations",
             str(max_num_iterations),
-            "--model"
+            "--model",
             f"{nerfstudio_model}",
         ]
         
