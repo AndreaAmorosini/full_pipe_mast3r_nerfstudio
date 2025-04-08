@@ -14,7 +14,7 @@ def run_command(command):
         print(f"Command failed: {' '.join(command)}")
         sys.exit(process.returncode)
 
-def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, max_num_iterations = 30000, verbose=False, model="splatfacto", advanced=True):	
+def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, max_num_iterations = 30000, verbose=False, model="splatfacto", advanced=False):	
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
@@ -105,5 +105,6 @@ if __name__ == "__main__":
     parser.add_argument("--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument("--model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w", "splatfacto-w-light"], help="Model type to use for training.")
+    parser.add_argument("--advanced", action="store_true", help="Enable advanced settings for training.")
     args = parser.parse_args()
-    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.max_num_iterations, args.verbose, args.model)
+    invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.max_num_iterations, args.verbose, args.model, args.advanced)

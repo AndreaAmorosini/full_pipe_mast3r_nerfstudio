@@ -13,12 +13,16 @@ def run_command(command):
         sys.exit(process.returncode)
 
 
-def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000, start_over=False, only_nerfstudio=False):
+def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
+              max_num_iterations=30000, start_over=False, only_nerfstudio=False,
+              nerfstudio_model="splatfacto", advanced_training=False):
+    
     print("Starting full pipeline...")
     print(f"Video path: {video_path}") #data/data_source/camera.MP4
     print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/input
     print(f"Frame count: {frame_count}")
     print(f"Use only nerfstudio: {only_nerfstudio}")
+    print(f"Nerftsudio Model: {nerfstudio_model}")
     # Check if the output directory exists, if not create it
     if not os.path.exists(frame_output_dir):
         os.makedirs(frame_output_dir)
@@ -130,6 +134,8 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
             f"{mast3r_output_dir}",            
             "--max-num-iterations",
             str(max_num_iterations),
+            "--model",
+            f"{nerfstudio_model}",
         ]
     else:
         nerfstudio_cmd = [
@@ -144,7 +150,13 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
             "--skip-colmap",
             "--max-num-iterations",
             str(max_num_iterations),
+            "--model"
+            f"{nerfstudio_model}",
         ]
+        
+    if advanced_training:
+        nerfstudio_cmd.append("--advanced")
+    
     run_command(nerfstudio_cmd)
     print("Nerfstudio processing complete.")
 
@@ -167,10 +179,16 @@ if __name__ == "__main__":
         "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
     )
     parser.add_argument(
+        "--nerfstudio-model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w", "splatfacto-w-light"], help="Model type to use for training."
+    )
+    parser.add_argument(
         "--start-over", type=bool, default=False, help="Start over the pipeline."
     )
     parser.add_argument(
         "--only-nerfstudio", action=bool, help="Use only nerfstudio for the entire pipeline"
+    )
+    parser.add_argument(
+        "--advanced-training", action="store_true", help="Enable advanced settings for training."
     )
     args = parser.parse_args()
     
@@ -182,4 +200,6 @@ if __name__ == "__main__":
         max_num_iterations=args.max_num_iterations,
         start_over=args.start_over,
         only_nerfstudio=args.only_nerfstudio,
+        nerfstudio_model=args.nerfstudio_model,
+        advanced_training=args.advanced_training,
     )
