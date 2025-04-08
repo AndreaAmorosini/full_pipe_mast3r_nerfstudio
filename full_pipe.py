@@ -13,11 +13,12 @@ def run_command(command):
         sys.exit(process.returncode)
 
 
-def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000, start_over=False):
+def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_iterations=30000, start_over=False, only_nerfstudio=False):
     print("Starting full pipeline...")
     print(f"Video path: {video_path}") #data/data_source/camera.MP4
     print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/input
     print(f"Frame count: {frame_count}")
+    print(f"Use only nerfstudio: {only_nerfstudio}")
     # Check if the output directory exists, if not create it
     if not os.path.exists(frame_output_dir):
         os.makedirs(frame_output_dir)
@@ -58,7 +59,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         "--output",
         frame_output_dir,
     ]
-    if skip_frame_extraction is False:
+    if skip_frame_extraction is False and only_nerfstudio is False:
         run_command(frame_extract_cmd)
 
     # Step 2: Process the data with Mast3r
@@ -96,7 +97,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         str(15),
         "--win_cyclic",
     ]
-    if skip_mast3r_processing is False:
+    if skip_mast3r_processing is False and only_nerfstudio is False:
         run_command(mast3r_glomap_command)
         
     print("Data processing complete.")
@@ -118,19 +119,32 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap, max_num_it
         print(f"Transform.json does not exist in {mast3r_output_dir}. Proceeding with nerfstudio processing.")
     
     # Step 3: Process the data and train with nerfstudio
-    nerfstudio_cmd = [
-        "python",
-        "nerfstudio_commands.py",
-        "--data-path",
-        frame_output_dir,
-        "--output-dir",
-        f"{mast3r_output_dir}",
-        "--colmap-model-path",
-        "colmap/sparse/0",
-        "--skip-colmap",
-        "--max-num-iterations",
-        str(max_num_iterations),
-    ]
+    if only_nerfstudio:
+        print("Only nerfstudio processing is selected. Skipping Mast3r processing.")
+        nerfstudio_cmd = [
+            "python",
+            "nerfstudio_commands.py",
+            "--data-path",
+            frame_output_dir,
+            "--output-dir",
+            f"{mast3r_output_dir}",            
+            "--max-num-iterations",
+            str(max_num_iterations),
+        ]
+    else:
+        nerfstudio_cmd = [
+            "python",
+            "nerfstudio_commands.py",
+            "--data-path",
+            frame_output_dir,
+            "--output-dir",
+            f"{mast3r_output_dir}",
+            "--colmap-model-path",
+            "colmap/sparse/0",
+            "--skip-colmap",
+            "--max-num-iterations",
+            str(max_num_iterations),
+        ]
     run_command(nerfstudio_cmd)
     print("Nerfstudio processing complete.")
 
@@ -155,6 +169,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--start-over", type=bool, default=False, help="Start over the pipeline."
     )
+    parser.add_argument(
+        "--only-nerfstudio", action=bool, help="Use only nerfstudio for the entire pipeline"
+    )
     args = parser.parse_args()
     
     full_pipe(
@@ -164,4 +181,5 @@ if __name__ == "__main__":
         skip_colmap=args.skip_colmap,
         max_num_iterations=args.max_num_iterations,
         start_over=args.start_over,
+        only_nerfstudio=args.only_nerfstudio,
     )

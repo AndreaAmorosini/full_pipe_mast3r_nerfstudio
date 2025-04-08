@@ -18,7 +18,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
-        "images",
+        "images" if skip_colmap is False else "video",
         "--gpu", 
         "--data",
         input_path,
