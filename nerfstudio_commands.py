@@ -46,7 +46,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         train_cmd.append("--max-num-iterations")
         train_cmd.append(str(max_num_iterations))
 
-    if advanced and (model != "splatfacto-w" or model != "splatfacto-w-light"):
+    if advanced and model not in  ["splatfacto-w","splatfacto-w-light"]:
         train_cmd.extend([
             "--pipeline.model.cull-alpha-thresh", "0.005",
             "--pipeline.model.use-scale-regularization", "True",
@@ -56,7 +56,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
             "--pipeline.model.camera-optimizer.mode", "SO3xR3",
             "--pipeline.model.color-corrected-metrics", "True",
         ])
-    elif advanced and (model == "splatfacto-w" or model == "splatfacto-w-light"):
+    elif advanced and model in ["splatfacto-w", "splatfacto-w-light"]:
         train_cmd.extend([
             "--pipeline.model.cull-alpha-thresh", "0.005",
             "--pipeline.model.use-scale-regularization", "True",
@@ -133,6 +133,6 @@ if __name__ == "__main__":
     parser.add_argument("--advanced", action="store_true", help="Enable advanced settings for training.")
     args = parser.parse_args()
     if args.frame_extraction:
-        frame_extraction_command(args.data_path, args.output_dir.split("/input")[0], args.frame_count)
+        frame_extraction_command(args.data_path, args.output_dir.split("/images")[0], args.frame_count)
     else:
         invoke_command(args.data_path, args.output_dir, args.colmap_model_path, args.skip_colmap, args.max_num_iterations, args.verbose, args.model, args.advanced)

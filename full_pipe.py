@@ -19,7 +19,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
     
     print("Starting full pipeline...")
     print(f"Video path: {video_path}") #data/data_source/camera.MP4
-    print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/input
+    print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/images
     print(f"Frame count: {frame_count}")
     print(f"Use only nerfstudio: {only_nerfstudio}")
     print(f"Nerftsudio Model: {nerfstudio_model}")
@@ -80,13 +80,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
 
 
     # Step 2: Process the data with Mast3r
-    mast3r_output_dir = frame_output_dir.split("/input")[0] # outputs/full_pipe/camera
-    #Search for a folder named images and rename it to input
-    images_dir = os.path.join(frame_output_dir, "images")
-    if os.path.exists(images_dir):
-        new_images_dir = os.path.join(frame_output_dir, "input")
-        os.rename(images_dir, new_images_dir)
-        print(f"Renamed {images_dir} to {new_images_dir}")
+    mast3r_output_dir = frame_output_dir.split("/images")[0] # outputs/full_pipe/camera
     print(f"Output directory for Mast3r: {mast3r_output_dir}")
     
     #Check if exist colmap/sparse/0 and its content made up of three files
