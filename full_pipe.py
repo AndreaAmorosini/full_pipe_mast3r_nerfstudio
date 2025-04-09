@@ -100,7 +100,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
                 skip_mast3r_processing = True
     
     mast3r_glomap_command = [
-        "conda run -n mast3r_env",
+        "conda", "run", "-n", "mast3r_env",
         "python",
         "mast3r_glomap_cli.py",
         "--model_name",
