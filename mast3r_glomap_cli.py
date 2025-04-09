@@ -278,5 +278,4 @@ def main_cli():
     )
 
 if __name__ == '__main__':
-    print("2. Running Mast3r Glomap CLI")
     main_cli()
