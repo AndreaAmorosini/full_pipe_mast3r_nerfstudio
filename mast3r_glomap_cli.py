@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+print("Running Mast3r Glomap CLI")
 import os
 import sys
 import shutil
@@ -264,6 +265,8 @@ def main_cli():
     # The checkpoint tag is computed for consistency but is not used here for temporary caching.
     chkpt_tag = hash_md5(weights_path)
 
+    print(f"Using model {args.model_name} with weights {weights_path}")
+    print(f"Using device {args.device}")
     # Run the reconstruction pipeline.
     scene_state, outfile = get_reconstructed_scene(
         args.glomap_bin, outdir,
@@ -275,4 +278,5 @@ def main_cli():
     )
 
 if __name__ == '__main__':
+    print("2. Running Mast3r Glomap CLI")
     main_cli()
