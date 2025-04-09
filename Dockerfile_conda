@@ -104,6 +104,7 @@ RUN conda run -n mast3r_env git clone --branch mast3r_sfm --recursive https://gi
 
 # b) Install main Python dependencies from the repo inside the conda environment
 WORKDIR /opt/mast3r
+RUN conda install pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia
 RUN conda run -n mast3r_env pip install --no-cache-dir -r requirements.txt
 # If you need optional packages, uncomment or adapt the following line:
 RUN conda run -n mast3r_env pip install --no-cache-dir -r dust3r/requirements.txt && \
@@ -119,7 +120,8 @@ RUN conda run -n mast3r_env git clone https://github.com/jenicek/asmk /opt/mast3
 WORKDIR /opt/mast3r/asmk/cython
 RUN conda run -n mast3r_env cythonize *.pyx
 WORKDIR /opt/mast3r/asmk
-RUN conda run -n mast3r_env python3 setup.py install
+RUN conda run -n mast3r_env pip install --no-cache-dir "numpy<2.0.0"
+RUN conda run -n mast3r_env pip install --no-cache-dir .
 
 # e) (Optional) Compile the CUDA kernels for RoPE (CroCo v2).
 #    Uncomment the lines below if needed:
@@ -180,5 +182,6 @@ COPY --from=builder /opt/miniconda /opt/miniconda
 ENV PATH=/opt/miniconda/bin:$PATH
 
 RUN /bin/bash -c 'ns-install-cli --mode install'
+RUN "conda init"
 
 CMD ["/bin/bash", "-l"]
