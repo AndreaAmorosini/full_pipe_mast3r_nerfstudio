@@ -30,6 +30,8 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
     skip_frame_extraction = False
     skip_mast3r_processing = False
     
+    
+    
     #Check for existing file
     if os.path.exists(frame_output_dir):
         #Check for images in the folder
@@ -112,7 +114,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
         "--scenegraph_type",
         "swin",
         "--winsize",
-        str(15),
+        str(20),
         "--win_cyclic",
     ]
     if skip_mast3r_processing is False and only_nerfstudio is False:
