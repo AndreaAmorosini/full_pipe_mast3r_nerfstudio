@@ -201,7 +201,7 @@ if __name__ == "__main__":
         "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
     )
     parser.add_argument(
-        "--nerfstudio-model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w", "splatfacto-w-light"], help="Model type to use for training."
+        "--nerfstudio-model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w-light"], help="Model type to use for training."
     )
     parser.add_argument(
         "--start-over", type=bool, default=False, help="Start over the pipeline."

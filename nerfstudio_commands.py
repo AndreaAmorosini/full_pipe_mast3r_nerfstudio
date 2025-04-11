@@ -172,7 +172,6 @@ if __name__ == "__main__":
     parser.add_argument("--frame-count", type=int, default=3000, help="Number of frames to extract.")
     parser.add_argument("--colmap-model-path", type=str, help="Path to the COLMAP model directory.")
     parser.add_argument("--skip-colmap", action="store_true", help="Skip COLMAP processing.")
-    parser.add_argument("--num-downscales", type=int, default=8, help="Number of downscales for processing.")
     parser.add_argument("--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument("--model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w-light"], help="Model type to use for training.")
