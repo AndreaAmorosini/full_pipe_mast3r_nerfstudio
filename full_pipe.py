@@ -15,7 +15,7 @@ def run_command(command):
 
 def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
               max_num_iterations=30000, start_over=False, only_nerfstudio=False,
-              nerfstudio_model="splatfacto", advanced_training=False):
+              nerfstudio_model="splatfacto", advanced_training=False, use_mcmc=False, num_downscales=8):
     
     print("Starting full pipeline...")
     print(f"Video path: {video_path}") #data/data_source/camera.MP4
@@ -169,9 +169,15 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
             "--model",
             f"{nerfstudio_model}",
         ]
-        
+       
+    nerfstudio_cmd.append("--num-downscales")
+    nerfstudio_cmd.append(str(num_downscales))
+     
     if advanced_training:
         nerfstudio_cmd.append("--advanced")
+        
+    if use_mcmc:
+        nerfstudio_cmd.append("--use-mcmc")
     
     run_command(nerfstudio_cmd)
     print("Nerfstudio processing complete.")
@@ -206,6 +212,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--advanced-training", action="store_true", help="Enable advanced settings for training."
     )
+    parser.add_argument(
+        "--use-mcmc", action="store_true", help="Use MCMC for training."
+    )
+    parser.add_argument(
+        "--num-downscales",
+        type=int,
+        default=8,
+        choices=[1, 2, 4, 8],
+        help="Number of downscales for processing.",
+    )
     args = parser.parse_args()
     
     full_pipe(
@@ -218,4 +234,6 @@ if __name__ == "__main__":
         only_nerfstudio=args.only_nerfstudio,
         nerfstudio_model=args.nerfstudio_model,
         advanced_training=args.advanced_training,
+        use_mcmc=args.use_mcmc,
+        num_downscales=args.num_downscales,
     )
