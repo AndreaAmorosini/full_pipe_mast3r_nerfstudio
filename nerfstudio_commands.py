@@ -57,7 +57,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
             "--pipeline.model.use-bilateral-grid", "True",
             "--pipeline.datamanager.train-cameras-sampling-strategy", "fps",
             "--pipeline.model.camera-optimizer.mode", "SO3xR3",
-            "--pipeline.model.color-corrected-metrics", "True",
+            # "--pipeline.model.color-corrected-metrics", "True",
             "--pipeline.model.cull-scale-thresh", "0.5",
             "--pipeline.model.densify-grad-thresh", "0.0008",
             "--pipeline.model.densify-size-thresh", "0.01",
@@ -85,7 +85,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     
     # --pipeline.model.cull-alpha-thresh FLOAT :threshold of opacity for culling gaussians. One can set it to a lower value (e.g. 0.005) for higher quality. (default: 0.1)
     # --pipeline.model.use-scale-regularization {True,False}: If enabled, a scale regularization introduced in PhysGauss (https://xpandora.github.io/PhysGaussian/) is used for reducing huge spikey gaussians. (default: False)
-    # --pipeline.model.use-bilateral-grid {True,False}: If True, use bilateral grid to handle the ISP changes in the image space. This technique was introduced in the paper 'Bilateral Guided Radiance Field Processing' (https://bilarfpro.github.io/). (default:False)
+    # CAN GIVE PROBLEMS --pipeline.model.use-bilateral-grid {True,False}: If True, use bilateral grid to handle the ISP changes in the image space. This technique was introduced in the paper 'Bilateral Guided Radiance Field Processing' (https://bilarfpro.github.io/). (default:False)
     
     # --pipeline.model.strategy {default,mcmc}: The default strategy will be used if strategy is not specified. Other strategies, e.g. mcmc, can be used. (default: default)
     # --pipeline.model.noise-lr FLOAT: MCMC samping noise learning rate. Default to 5e5. (default:500000.0)
