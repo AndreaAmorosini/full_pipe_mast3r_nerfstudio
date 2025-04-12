@@ -2,7 +2,6 @@ import subprocess
 import sys
 import time
 import argparse
-import re
 import os
 
 config_file_path = ""
@@ -15,7 +14,7 @@ def run_command(command):
         sys.exit(process.returncode)
 
 def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=False, max_num_iterations = 30000, verbose=False, model="splatfacto", advanced=False, use_mcmc=False, num_downscales=8):
-    print("Starting Nerfstudio pipeline...")	
+    print("Starting Nerfstudio pipeline...")
     # Step 1: Process the data
     process_data_cmd = [
         "ns-process-data",
@@ -36,7 +35,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         process_data_cmd.append("--verbose")
     
     run_command(process_data_cmd)
-
+    
     print("Data processing complete.")
     time.sleep(2)  # Optionally wait a bit
 

@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 import shutil
+import time
 
 def run_command(command):
     print(f"Running command: {' '.join(command)}")
@@ -17,6 +18,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
               max_num_iterations=30000, start_over=False, only_nerfstudio=False,
               nerfstudio_model="splatfacto", advanced_training=False, use_mcmc=False, num_downscales=8):
     
+    frame_extract_start_time = time.time()
     print("Starting full pipeline...")
     print(f"Video path: {video_path}") #data/data_source/camera.MP4
     print(f"Output path: {frame_output_dir}") #outputs/full_pipe/camera/images
@@ -29,8 +31,9 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
         
     skip_frame_extraction = False
     skip_mast3r_processing = False
-    
-    
+    frame_extract_time = 0
+    mast3r_processing_time = 0
+    training_time = 0
     
     #Check for existing file
     if os.path.exists(frame_output_dir):
@@ -79,6 +82,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
     ]
     if skip_frame_extraction is False and only_nerfstudio is False:
         run_command(frame_extract_cmd)
+        frame_extract_time = time.time() - frame_extract_start_time
 
 
     # Step 2: Process the data with Mast3r
@@ -118,7 +122,9 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
         "--win_cyclic",
     ]
     if skip_mast3r_processing is False and only_nerfstudio is False:
+        mast3r_start_time = time.time()
         run_command(mast3r_glomap_command)
+        mast3r_processing_time = time.time() - mast3r_start_time
         
     print("Data processing complete.")
     time.sleep(2)  # Optionally wait a bit
@@ -179,9 +185,20 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
     if use_mcmc:
         nerfstudio_cmd.append("--use-mcmc")
     
+    training_start_time = time.time()
     run_command(nerfstudio_cmd)
+    training_time = time.time() - training_start_time
     print("Nerfstudio processing complete.")
-
+    
+    if skip_frame_extraction is not True:
+        print(f"Frame extraction time: {time.strftime('%H:%M:%S', time.gmtime(frame_extract_time))}")
+        
+    if skip_mast3r_processing is not True:
+        print(f"Mast3r processing time: {time.strftime('%H:%M:%S', time.gmtime(mast3r_processing_time))}")
+        
+    print(f"Nerfstudio training time: {time.strftime('%H:%M:%S', time.gmtime(training_time))}")
+    print("Full pipeline complete.")
+    print("Total time: ", time.strftime("%H:%M:%S", time.gmtime(frame_extract_time + mast3r_processing_time + training_time)))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Complete Gaussian Splatting pipeline.")
