@@ -267,7 +267,7 @@ if __name__ == "__main__":
         RETRY_COUNTER += 1
         print(f"Error occurred: {e}. Retrying... ({RETRY_COUNTER}/{RETRY_LIMIT})")
         time.sleep(RETRY_COOLDOWN)
-        if args.frame_count > 400:
+        if args.frame_count > 400 and RETRY_COUNTER == 3:
             args.frame_count = 400
         
         full_pipe(
