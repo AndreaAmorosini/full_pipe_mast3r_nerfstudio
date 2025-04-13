@@ -42,7 +42,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
     #Check for existing file
     if os.path.exists(frame_output_dir):
         #Check for images in the folder
-        if len(os.listdir(frame_output_dir)) > 0:
+        if len(os.listdir(frame_output_dir)) == args.frame_count:
             print(f"Output directory {frame_output_dir} already exists and is not empty.")
             if start_over:
                 #Clean all content
