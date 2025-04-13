@@ -6,6 +6,10 @@ import time
 import shutil
 import time
 
+RETRY_LIMIT = 3
+RETRY_COUNTER = 0
+RETRY_COOLDOWN = 120  # seconds
+
 def run_command(command):
     print(f"Running command: {' '.join(command)}")
     process = subprocess.run(command)
@@ -83,6 +87,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
     if skip_frame_extraction is False and only_nerfstudio is False:
         run_command(frame_extract_cmd)
         frame_extract_time = time.time() - frame_extract_start_time
+        time.sleep(60)
 
 
     # Step 2: Process the data with Mast3r
@@ -125,9 +130,9 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
         mast3r_start_time = time.time()
         run_command(mast3r_glomap_command)
         mast3r_processing_time = time.time() - mast3r_start_time
+        time.sleep(60)
         
     print("Data processing complete.")
-    time.sleep(2)  # Optionally wait a bit
     
     #Check if transform.json is already present in the directory
     transform_json_path = os.path.join(mast3r_output_dir, "transform.json")
@@ -241,16 +246,43 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     
-    full_pipe(
-        video_path=args.video_path,
-        frame_output_dir=args.output_dir,
-        frame_count=args.frame_count,
-        skip_colmap=args.skip_colmap,
-        max_num_iterations=args.max_num_iterations,
-        start_over=args.start_over,
-        only_nerfstudio=args.only_nerfstudio,
-        nerfstudio_model=args.nerfstudio_model,
-        advanced_training=args.advanced_training,
-        use_mcmc=args.use_mcmc,
-        num_downscales=args.num_downscales,
-    )
+    try:
+        full_pipe(
+            video_path=args.video_path,
+            frame_output_dir=args.output_dir,
+            frame_count=args.frame_count,
+            skip_colmap=args.skip_colmap,
+            max_num_iterations=args.max_num_iterations,
+            start_over=args.start_over,
+            only_nerfstudio=args.only_nerfstudio,
+            nerfstudio_model=args.nerfstudio_model,
+            advanced_training=args.advanced_training,
+            use_mcmc=args.use_mcmc,
+            num_downscales=args.num_downscales,
+        )
+    except Exception as e:
+        if RETRY_COUNTER >= RETRY_LIMIT:
+            print(f"Too many Error occurred: {e}. Exiting...")
+            sys.exit(1)
+        RETRY_COUNTER += 1
+        print(f"Error occurred: {e}. Retrying... ({RETRY_COUNTER}/{RETRY_LIMIT})")
+        time.sleep(RETRY_COOLDOWN)
+        if args.frame_count > 400:
+            args.frame_count = 400
+        
+        full_pipe(
+            video_path=args.video_path,
+            frame_output_dir=args.output_dir,
+            frame_count=args.frame_count,
+            skip_colmap=args.skip_colmap,
+            max_num_iterations=args.max_num_iterations,
+            start_over=args.start_over,
+            only_nerfstudio=args.only_nerfstudio,
+            nerfstudio_model=args.nerfstudio_model,
+            advanced_training=args.advanced_training,
+            use_mcmc=args.use_mcmc,
+            num_downscales=args.num_downscales,
+        )
+    except KeyboardInterrupt:
+        print("Keyboard interrupt. Exiting...")
+        sys.exit(0)
