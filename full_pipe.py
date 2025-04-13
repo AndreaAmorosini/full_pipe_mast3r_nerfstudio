@@ -8,7 +8,7 @@ import time
 
 RETRY_LIMIT = 3
 RETRY_COUNTER = 0
-RETRY_COOLDOWN = 120  # seconds
+RETRY_COOLDOWN = 180  # seconds
 
 def run_command(command):
     print(f"Running command: {' '.join(command)}")
