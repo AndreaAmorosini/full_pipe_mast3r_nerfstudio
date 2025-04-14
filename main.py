@@ -64,25 +64,18 @@ def extract_key_from_url(download_url: str) -> str:
     where {encoded_key} is a base64 encoded string.
     """
     parsed = urlparse(download_url)
+    print("PARSED_URL:" + str(parsed))
     # Split the path
     path_parts = parsed.path.split("/")
     # Expecting something like ['', 'api', 'v1', 'download-shared-object', '{encoded_key}']
-    if len(path_parts) >= 5 and path_parts[1:4] == [
-        "api",
-        "v1",
-        "download-shared-object",
-    ]:
-        encoded_key = path_parts[-1]
-        try:
-            key = base64.b64decode(encoded_key).decode("utf-8")
-            return key
-        except Exception as e:
-            print(f"Decoding failed: {e}. Using the raw encoded key.")
-            return encoded_key
-    else:
-        # If the URL does not match the expected structure,
-        # You might need to parse it differently.
-        raise ValueError("Unexpected URL format. Could not extract object key.")
+    encoded_key = path_parts[-1]
+    print("ENCODED_KEY:" + encoded_key)
+    try:
+        key = base64.b64decode(encoded_key).decode("utf-8")
+        return key
+    except Exception as e:
+        print(f"Decoding failed: {e}. Using the raw encoded key.")
+        return encoded_key
 
 def read_s3_file(file_name):
     try:
