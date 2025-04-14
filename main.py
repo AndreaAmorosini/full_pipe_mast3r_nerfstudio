@@ -95,6 +95,7 @@ def read_s3_file(file_name):
         video_key = "/".join(path_parts[2:])
         print("VIDEO_KEY:" + video_key)
         response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=video_key)
+        print("RESPONSE:" + str(response))
         data = response['Body'].read()
         #DECODE FROM BASE64
         data = base64.b64decode(data)
