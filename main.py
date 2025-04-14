@@ -128,7 +128,8 @@ async def extract_ply(request: Request) -> Response:
                 detail="Video not found",
                 error_code=1000
             )
-        
+            
+        print("VIDEO FOUND")        
         #SAVE THE VIDEO TO THE LESSON DIRECTORY
         video_path = f"{lesson_dir}/{request.video_url.split('/')[-1]}"
         with open(video_path, "wb") as video_file:
