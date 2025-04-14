@@ -119,8 +119,10 @@ async def extract_ply(request: Request) -> Response:
         lesson_dir = f"/lessons/{request.lesson_name}_{request.lesson_id}"
         os.makedirs(lesson_dir, exist_ok=True)
         
+        video_key = extract_key_from_url(request.video_url)
+        
         #RETRIEVE THE VIDEO FROM MINIO
-        video = read_s3_file(request.video_url)
+        video = read_s3_file(video_key)
         if not video:
             raise CustomHTTPException(
                 status_code=404,
