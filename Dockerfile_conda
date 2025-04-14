@@ -183,5 +183,6 @@ ENV PATH=/opt/miniconda/bin:$PATH
 
 RUN /bin/bash -c 'ns-install-cli --mode install'
 RUN /bin/bash -c "conda init"
+RUN /bin/bash -c "pip install 'fastapi[standard]' minio boto3"
 
 CMD ["/bin/bash", "-l"]

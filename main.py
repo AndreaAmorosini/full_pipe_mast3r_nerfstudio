@@ -7,6 +7,16 @@ from pydantic import BaseModel
 from full_pipe import full_pipe
 from fastapi.middleware.cors import CORSMiddleware
 import time
+import minio
+import boto3
+import base64
+
+
+
+MINIO_EDNPOINT = "http://minio:9000"
+MINIO_ROOT_USER = "minioadmin"
+MINIO_ROOT_PASSWORD = "minioadmin123"
+AWS_STORAGE_BUCKET_NAME = "lessons-media"
 
 class CustomHTTPException(HTTPException):
     def __init__(self, status_code: int, detail: str, error_code: int):
@@ -20,6 +30,8 @@ class Request(BaseModel):
     lesson_id: str | None = None
     lesson_name: str | None = None
     video_url: str | None = None
+    
+
 
 RETRY_LIMIT = 3
 RETRY_COUNTER = 0
@@ -37,6 +49,34 @@ app = FastAPI()
 #     allow_headers=["*"],
 # )
 
+s3 = boto3.client(
+    's3',
+    endpoint_url=MINIO_EDNPOINT,
+    aws_access_key_id=MINIO_ROOT_USER,
+    aws_secret_access_key=MINIO_ROOT_PASSWORD
+)
+
+def read_s3_file(file_name):
+    try:
+        response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=file_name)
+        data = response['Body'].read().decode("utf-8")
+        #DECODE FROM BASE64
+        data = base64.b64decode(data)
+        return data
+    except Exception as e:
+        print(f"Error reading file {file_name} from S3: {e}")
+        return None
+    
+def write_s3_file(file_path, remote_path):
+    try:
+        s3.Bucket(AWS_STORAGE_BUCKET_NAME).upload_file(
+            Filename=file_path,
+            Key=remote_path,
+        )
+        print(f"File {remote_path} written to S3")
+    except Exception as e:
+        print(f"Error writing file {file_path} to S3: {e}")
+
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
@@ -50,8 +90,19 @@ async def extract_ply(request: Request) -> Response:
         os.makedirs(lesson_dir, exist_ok=True)
         
         #RETRIEVE THE VIDEO FROM MINIO
+        video = read_s3_file(request.video_url)
+        if not video:
+            raise CustomHTTPException(
+                status_code=404,
+                detail="Video not found",
+                error_code=1000
+            )
         
-        video_path = ""
+        #SAVE THE VIDEO TO THE LESSON DIRECTORY
+        video_path = f"{lesson_dir}/{request.video_url.split('/')[-1]}"
+        with open(video_path, "wb") as video_file:
+            video_file.write(video)
+            
         output_dir = f"{lesson_dir}/images"
         frame_count = 400
         max_num_iterations = 100000
@@ -86,14 +137,13 @@ async def extract_ply(request: Request) -> Response:
         splat_path = f"/lessons/{request.lesson_name}_{request.lesson_id}/splat/splat.ply"
         
         #LOAD ON MINIO
-        
-        splat_url = ""
+        write_s3_file(splat_path, f"{request.lesson_name}_{request.lesson_id}/splat.ply")
         
         #DELETE FOLDER
         os.rmdir(lesson_dir)
         
         #RETURN THE URL
-        return Response(ply_url=splat_url)
+        return Response(ply_url=f"{request.lesson_name}_{request.lesson_id}/splat.ply")
     
     except Exception as e:
         raise CustomHTTPException(
