@@ -182,6 +182,6 @@ COPY --from=builder /opt/miniconda /opt/miniconda
 ENV PATH=/opt/miniconda/bin:$PATH
 
 RUN /bin/bash -c 'ns-install-cli --mode install'
-RUN "conda init"
+RUN /bin/bash -c "conda init"
 
 CMD ["/bin/bash", "-l"]
