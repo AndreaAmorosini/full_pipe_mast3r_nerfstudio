@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import full_pipe
+from full_pipe import full_pipe
 import os
 from fastapi.middleware.cors import CORSMiddleware
 import time
@@ -58,7 +58,7 @@ async def extract_ply(request: Request) -> Response:
         #RUN THE FULL PIPELINE            
         for attempt in range(1, RETRY_LIMIT + 1):
             try:
-                full_pipe.full_pipe(
+                full_pipe(
                     video_path=video_path,
                     output_dir=output_dir,
                     frame_count=frame_count,
