@@ -72,7 +72,7 @@ def extract_key_from_url(download_url: str) -> str:
         "v1",
         "download-shared-object",
     ]:
-        encoded_key = path_parts[4]
+        encoded_key = path_parts[-1]
         try:
             key = base64.b64decode(encoded_key).decode("utf-8")
             return key
@@ -117,12 +117,9 @@ async def extract_ply(request: Request) -> Response:
     try:
         #CREATE A DIRECTORY FOR THE LESSON
         lesson_dir = f"/lessons/{request.lesson_name}_{request.lesson_id}"
-        os.makedirs(lesson_dir, exist_ok=True)
-        
-        video_key = extract_key_from_url(request.video_url)
-        
+        os.makedirs(lesson_dir, exist_ok=True)        
         #RETRIEVE THE VIDEO FROM MINIO
-        video = read_s3_file(video_key)
+        video = read_s3_file(request.video_url)
         if not video:
             raise CustomHTTPException(
                 status_code=404,
