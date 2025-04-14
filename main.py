@@ -98,7 +98,7 @@ def read_s3_file(file_name):
         data = response['Body'].read()
         #DECODE FROM BASE64
         data = base64.b64decode(data)
-        return data
+        return data, video_key
     except Exception as e:
         print(f"Error reading file from S3: {e}")
         return None
@@ -125,7 +125,7 @@ async def extract_ply(request: Request) -> Response:
         lesson_dir = f"/lessons/{request.lesson_name}_{request.lesson_id}"
         os.makedirs(lesson_dir, exist_ok=True)        
         #RETRIEVE THE VIDEO FROM MINIO
-        video = read_s3_file(request.video_url)
+        video, video_key = read_s3_file(request.video_url)
         if not video:
             raise CustomHTTPException(
                 status_code=404,
@@ -135,7 +135,7 @@ async def extract_ply(request: Request) -> Response:
             
         print("VIDEO FOUND")        
         #SAVE THE VIDEO TO THE LESSON DIRECTORY
-        video_path = f"{lesson_dir}/{request.video_url.split('/')[-1]}"
+        video_path = f"{lesson_dir}/{video_key.split('/')[-1]}"
         with open(video_path, "wb") as video_file:
             video_file.write(video)
             
