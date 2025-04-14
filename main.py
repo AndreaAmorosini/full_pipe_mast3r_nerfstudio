@@ -97,7 +97,7 @@ def read_s3_file(file_name):
         response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=video_key)
         data = response['Body'].read()
         #DECODE FROM BASE64
-        data = base64.b64decode(data).decode("utf-8")
+        data = base64.b64decode(data)
         return data
     except Exception as e:
         print(f"Error reading file from S3: {e}")
