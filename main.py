@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from full_pipe import full_pipe
 from fastapi.middleware.cors import CORSMiddleware
 import time
-import uvicorn
 
 class CustomHTTPException(HTTPException):
     def __init__(self, status_code: int, detail: str, error_code: int):
@@ -103,7 +102,4 @@ async def extract_ply(request: Request) -> Response:
             error_code=1001
         )
         
-    
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-    
+        
