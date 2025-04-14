@@ -88,8 +88,12 @@ def read_s3_file(file_name):
         print("ENCODED_KEY:" + encoded_key)
         missing_padding = len(file_name.split("/")[-1]) % 4
         encoded_key = encoded_key + '=' * (4 - missing_padding) 
-        video_key = base64.b64decode(encoded_key).decode("utf-8")
-        print("KEY:" + video_key)       
+        decoded_key = base64.b64decode(encoded_key).decode("utf-8")
+        print("DECODED KEY:" + decoded_key)
+        parsed_decoded = urlparse(decoded_key)
+        path_parts = parsed_decoded.path.split("/")
+        video_key = "/".join(path_parts[2:])
+        print("VIDEO_KEY:" + video_key)
         response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=video_key)
         data = response['Body'].read().decode("utf-8")
         #DECODE FROM BASE64
