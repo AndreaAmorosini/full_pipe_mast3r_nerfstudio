@@ -87,7 +87,7 @@ def read_s3_file(file_name):
         encoded_key = file_name.split("/")[-1]
         print("ENCODED_KEY:" + encoded_key)
         missing_padding = len(file_name.split("/")[-1]) % 4
-        encoded_key = encoded_key + '=' * (4 - missing_padding) 
+        # encoded_key = encoded_key + '=' * (4 - missing_padding) 
         decoded_key = base64.b64decode(encoded_key).decode("utf-8")
         print("DECODED KEY:" + decoded_key)
         parsed_decoded = urlparse(decoded_key)
