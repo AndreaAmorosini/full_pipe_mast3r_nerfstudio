@@ -95,12 +95,12 @@ def read_s3_file(file_name):
         video_key = "/".join(path_parts[2:])
         print("VIDEO_KEY:" + video_key)
         response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=video_key)
-        data = response['Body'].read().decode("utf-8")
+        data = response['Body'].read()
         #DECODE FROM BASE64
-        data = base64.b64decode(data)
+        data = base64.b64decode(data).decode("utf-8")
         return data
     except Exception as e:
-        print(f"Error reading file {file_name} from S3: {e}")
+        print(f"Error reading file from S3: {e}")
         return None
     
 def write_s3_file(file_path, remote_path):
