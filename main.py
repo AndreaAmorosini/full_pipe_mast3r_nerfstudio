@@ -83,8 +83,11 @@ def extract_key_from_url(download_url: str) -> str:
 def read_s3_file(file_name):
     try:
         #EXTRACT THE KEY FROM THE URL
-        # key = extract_key_from_url(file_name) 
-        key = base64.b64decode(file_name.split("/")[-1]).decode("utf-8")
+        # key = extract_key_from_url(file_name)
+        encoded_key = file_name.split("/")[-1]
+        missing_padding = len(file_name.split("/")[-1]) % 4
+        encoded_key = encoded_key + '=' * (4 - missing_padding) 
+        key = base64.b64decode(encoded_key).decode("utf-8")
         print("KEY:" + key)       
         response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=key)
         data = response['Body'].read().decode("utf-8")
