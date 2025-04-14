@@ -84,16 +84,17 @@ def read_s3_file(file_name):
     try:
         #EXTRACT THE KEY FROM THE URL
         # key = extract_key_from_url(file_name)
-        encoded_key = file_name.split("/")[-1]
-        print("ENCODED_KEY:" + encoded_key)
-        missing_padding = len(file_name.split("/")[-1]) % 4
-        # encoded_key = encoded_key + '=' * (4 - missing_padding) 
-        decoded_key = base64.b64decode(encoded_key).decode("utf-8")
-        print("DECODED KEY:" + decoded_key)
-        parsed_decoded = urlparse(decoded_key)
-        path_parts = parsed_decoded.path.split("/")
-        video_key = "/".join(path_parts[2:])
-        print("VIDEO_KEY:" + video_key)
+        # encoded_key = file_name.split("/")[-1]
+        # print("ENCODED_KEY:" + encoded_key)
+        # missing_padding = len(file_name.split("/")[-1]) % 4
+        # # encoded_key = encoded_key + '=' * (4 - missing_padding) 
+        # decoded_key = base64.b64decode(encoded_key).decode("utf-8")
+        # print("DECODED KEY:" + decoded_key)
+        # parsed_decoded = urlparse(decoded_key)
+        # path_parts = parsed_decoded.path.split("/")
+        # video_key = "/".join(path_parts[2:])
+        # print("VIDEO_KEY:" + video_key)
+        video_key = file_name
         response = s3.get_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=video_key)
         print("RESPONSE:" + str(response))
         data = response['Body'].read()
