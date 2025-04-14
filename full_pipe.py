@@ -18,7 +18,7 @@ def run_command(command):
         sys.exit(process.returncode)
 
 
-def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap,
+def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
               max_num_iterations=30000, start_over=False, only_nerfstudio=False,
               nerfstudio_model="splatfacto", advanced_training=False, use_mcmc=False, num_downscales=8):
     
@@ -246,43 +246,30 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     
-    try:
-        full_pipe(
-            video_path=args.video_path,
-            frame_output_dir=args.output_dir,
-            frame_count=args.frame_count,
-            skip_colmap=args.skip_colmap,
-            max_num_iterations=args.max_num_iterations,
-            start_over=args.start_over,
-            only_nerfstudio=args.only_nerfstudio,
-            nerfstudio_model=args.nerfstudio_model,
-            advanced_training=args.advanced_training,
-            use_mcmc=args.use_mcmc,
-            num_downscales=args.num_downscales,
-        )
-    except Exception as e:
-        if RETRY_COUNTER >= RETRY_LIMIT:
-            print(f"Too many Error occurred: {e}. Exiting...")
-            sys.exit(1)
-        RETRY_COUNTER += 1
-        print(f"Error occurred: {e}. Retrying... ({RETRY_COUNTER}/{RETRY_LIMIT})")
-        time.sleep(RETRY_COOLDOWN)
-        if args.frame_count > 400 and RETRY_COUNTER == 3:
-            args.frame_count = 400
         
-        full_pipe(
-            video_path=args.video_path,
-            frame_output_dir=args.output_dir,
-            frame_count=args.frame_count,
-            skip_colmap=args.skip_colmap,
-            max_num_iterations=args.max_num_iterations,
-            start_over=args.start_over,
-            only_nerfstudio=args.only_nerfstudio,
-            nerfstudio_model=args.nerfstudio_model,
-            advanced_training=args.advanced_training,
-            use_mcmc=args.use_mcmc,
-            num_downscales=args.num_downscales,
-        )
-    except KeyboardInterrupt:
-        print("Keyboard interrupt. Exiting...")
-        sys.exit(0)
+    for attempt in range(1, RETRY_LIMIT + 1):
+        try:
+            full_pipe(
+                video_path=args.video_path,
+                frame_output_dir=args.output_dir,
+                frame_count=args.frame_count,
+                skip_colmap=args.skip_colmap,
+                max_num_iterations=args.max_num_iterations,
+                start_over=args.start_over,
+                only_nerfstudio=args.only_nerfstudio,
+                nerfstudio_model=args.nerfstudio_model,
+                advanced_training=args.advanced_training,
+                use_mcmc=args.use_mcmc,
+                num_downscales=args.num_downscales,
+            )
+            print("Pipeline completed successfully.")
+            break  # Exit the loop if successful
+        except Exception as e:
+            print(f"Attempt {attempt} failed: {e}")
+            if attempt <= RETRY_LIMIT:
+                print(f"Retrying in {RETRY_COOLDOWN} seconds...")
+                time.sleep(RETRY_COOLDOWN)
+            else:
+                print("Max attempts reached. Exiting.")
+                raise e
+
