@@ -150,7 +150,7 @@ async def extract_ply(request: Request) -> Response:
             try:
                 full_pipe(
                     video_path=video_path,
-                    output_dir=output_dir,
+                    frame_output_dir=output_dir,
                     frame_count=frame_count,
                     max_num_iterations=max_num_iterations,
                     nerfstudio_model=nerfstudio_model,
