@@ -70,6 +70,9 @@ def extract_key_from_url(download_url: str) -> str:
     # Expecting something like ['', 'api', 'v1', 'download-shared-object', '{encoded_key}']
     encoded_key = path_parts[-1]
     print("ENCODED_KEY:" + encoded_key)
+    missing_padding = len(encoded_key) % 4
+    if missing_padding:
+        encoded_key += '=' * (4 - missing_padding)
     try:
         key = base64.b64decode(encoded_key).decode("utf-8")
         return key
