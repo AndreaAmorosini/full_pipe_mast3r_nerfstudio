@@ -195,10 +195,10 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
     training_time = time.time() - training_start_time
     print("Nerfstudio processing complete.")
     
-    if skip_frame_extraction is not True:
+    if skip_frame_extraction is False:
         print(f"Frame extraction time: {time.strftime('%H:%M:%S', time.gmtime(frame_extract_time))}")
         
-    if skip_mast3r_processing is not True:
+    if skip_mast3r_processing is False:
         print(f"Mast3r processing time: {time.strftime('%H:%M:%S', time.gmtime(mast3r_processing_time))}")
         
     print(f"Nerfstudio training time: {time.strftime('%H:%M:%S', time.gmtime(training_time))}")

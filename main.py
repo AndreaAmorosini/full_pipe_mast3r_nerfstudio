@@ -72,6 +72,7 @@ def write_s3_file(file_path, remote_path):
         s3.upload_file(
             file_path,
             AWS_STORAGE_BUCKET_NAME,
+            remote_path,
         )
         print(f"File {remote_path} written to S3")
     except Exception as e:
@@ -121,6 +122,7 @@ async def extract_ply(request: Request) -> Response:
                     advanced_training = True,
                     use_mcmc = True,
                     num_downscales=num_downscales,
+                    start_over=True,
                 )
                 print("Pipeline completed successfully.")
                 break  # Exit the loop if successful
