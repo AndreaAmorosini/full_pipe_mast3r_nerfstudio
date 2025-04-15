@@ -80,6 +80,8 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     train_cmd.append("nerfstudio-data")
     train_cmd.append("--downscale-factor")
     train_cmd.append(str(num_downscales))
+    train_cmd.append("--center-method")
+    train_cmd.append("none")
         
     
     # --pipeline.model.cull-alpha-thresh FLOAT :threshold of opacity for culling gaussians. One can set it to a lower value (e.g. 0.005) for higher quality. (default: 0.1)
@@ -140,6 +142,10 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
         f"{final_config_file_path}",
         "--output-dir",
         f"{output_path}/splat",
+        "--obb-center",
+        "0", "0", "0",
+        "--obb-rotation",
+        "0", "0", "0",
     ]
     run_command(export_cmd)
     print(".ply exported to", f"{output_path}/splat")
