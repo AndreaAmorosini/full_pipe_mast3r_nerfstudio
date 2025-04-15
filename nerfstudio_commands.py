@@ -122,6 +122,8 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     #Add option for mcmc
     #Add option for downscaling
     
+    # --center-method {poses, foucs, none} provare none (dopo nerfstudio-data)
+    
     run_command(train_cmd)
     
     config_file_path = f"{model_output_path}"

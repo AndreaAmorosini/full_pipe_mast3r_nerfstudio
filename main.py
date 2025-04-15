@@ -83,7 +83,7 @@ async def read_root():
     return {"Hello": "World"}
 
 
-@app.post("/extract_ply")
+@app.get("/extract_ply")
 async def extract_ply(request: Request) -> Response:
     try:
         #CREATE A DIRECTORY FOR THE LESSON
