@@ -123,7 +123,8 @@ async def extract_ply(request: Request) -> Response:
                     advanced_training = True if request.training_type == "full" else False,
                     use_mcmc = True if request.training_type == "full" else False,
                     num_downscales=num_downscales,
-                    start_over=True,
+                    #DA RIMODIFICARE IN TRUE
+                    start_over=False,
                 )
                 print("Pipeline completed successfully.")
                 break  # Exit the loop if successful
