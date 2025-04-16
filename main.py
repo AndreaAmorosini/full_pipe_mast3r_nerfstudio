@@ -30,6 +30,7 @@ class Request(BaseModel):
     lesson_id: str | None = None
     lesson_name: str | None = None
     video_url: str | None = None
+    training_type: str | None = None
     
 
 
@@ -107,8 +108,8 @@ async def extract_ply(request: Request) -> Response:
         output_dir = f"{lesson_dir}/images"
         frame_count = 400
         max_num_iterations = 100000
-        nerfstudio_model = "splatfacto-big"
-        num_downscales = 2
+        nerfstudio_model = "splatfacto-big" if request.training_type == "full" else "splatfacto"
+        num_downscales = 2 if request.training_type == "full" else 4
         
         #RUN THE FULL PIPELINE            
         for attempt in range(1, RETRY_LIMIT + 1):
@@ -119,8 +120,8 @@ async def extract_ply(request: Request) -> Response:
                     frame_count=frame_count,
                     max_num_iterations=max_num_iterations,
                     nerfstudio_model=nerfstudio_model,
-                    advanced_training = True,
-                    use_mcmc = True,
+                    advanced_training = True if request.training_type == "full" else False,
+                    use_mcmc = True if request.training_type == "full" else False,
                     num_downscales=num_downscales,
                     start_over=True,
                 )
@@ -143,12 +144,14 @@ async def extract_ply(request: Request) -> Response:
         
         #DELETE FOLDER
         os.rmdir(lesson_dir)
+        print("Folder deleted")
         
         #RETURN THE URL
         return Response(ply_url=f"{request.lesson_name}_{request.lesson_id}/splat.ply")
     
     except Exception as e:
         raise CustomHTTPException(
+            print(str(e)),
             status_code=500,
             detail=str(e),
             error_code=1001
