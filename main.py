@@ -11,6 +11,7 @@ import minio
 import boto3
 import base64
 from urllib.parse import urlparse
+import shutil
 
 
 MINIO_EDNPOINT = "http://minio:9000"
@@ -144,7 +145,7 @@ async def extract_ply(request: Request) -> Response:
         write_s3_file(splat_path, f"{request.lesson_name}_{request.lesson_id}/splat.ply")
         
         #DELETE FOLDER
-        os.rmdir(lesson_dir)
+        shutil.rmtree(lesson_dir, ignore_errors=True)
         print("Folder deleted")
         
         #RETURN THE URL
