@@ -25,7 +25,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/nerfstudio-project/nerfstudio.git /tmp/nerfstudio
-RUN git clone --recursive https://github.com/AndreaAmorosini/full_pipe_mast3r_nerfstudio.git /opt/full_pipe_mast3r_nerfstudio
+RUN git clone --branch CLI --recursive https://github.com/AndreaAmorosini/full_pipe_mast3r_nerfstudio.git /opt/full_pipe_mast3r_nerfstudio
 
 # ------------------------------------------------------------------------
 # 2. Install a newer CMake
