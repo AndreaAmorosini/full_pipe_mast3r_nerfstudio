@@ -205,71 +205,71 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
     print("Full pipeline complete.")
     print("Total time: ", time.strftime("%H:%M:%S", time.gmtime(frame_extract_time + mast3r_processing_time + training_time)))
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description="Run Complete Gaussian Splatting pipeline.")
-#     parser.add_argument(
-#         "--video-path", type=str, required=True, help="Path to the raw data."
-#     )
-#     parser.add_argument(
-#         "--output-dir", type=str, required=True, help="Directory for processed data."
-#     )
-#     parser.add_argument(
-#         "--frame-count", type=str, help="Path to the COLMAP model directory."
-#     )
-#     parser.add_argument(
-#         "--skip-colmap", action="store_true", help="Skip COLMAP processing."
-#     )
-#     parser.add_argument(
-#         "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
-#     )
-#     parser.add_argument(
-#         "--nerfstudio-model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w-light"], help="Model type to use for training."
-#     )
-#     parser.add_argument(
-#         "--start-over", type=bool, default=False, help="Start over the pipeline."
-#     )
-#     parser.add_argument(
-#         "--only-nerfstudio", type=bool, default=False, help="Use only nerfstudio for the entire pipeline"
-#     )
-#     parser.add_argument(
-#         "--advanced-training", action="store_true", help="Enable advanced settings for training."
-#     )
-#     parser.add_argument(
-#         "--use-mcmc", action="store_true", help="Use MCMC for training."
-#     )
-#     parser.add_argument(
-#         "--num-downscales",
-#         type=int,
-#         default=8,
-#         choices=[1, 2, 4, 8],
-#         help="Number of downscales for processing.",
-#     )
-#     args = parser.parse_args()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run Complete Gaussian Splatting pipeline.")
+    parser.add_argument(
+        "--video-path", type=str, required=True, help="Path to the raw data."
+    )
+    parser.add_argument(
+        "--output-dir", type=str, required=True, help="Directory for processed data."
+    )
+    parser.add_argument(
+        "--frame-count", type=str, help="Path to the COLMAP model directory."
+    )
+    parser.add_argument(
+        "--skip-colmap", action="store_true", help="Skip COLMAP processing."
+    )
+    parser.add_argument(
+        "--max-num-iterations", type=int, default=30000, help="Maximum number of iterations for training."
+    )
+    parser.add_argument(
+        "--nerfstudio-model", type=str, default="splatfacto", choices=["splatfacto", "splatfacto-big", "splatfacto-w-light"], help="Model type to use for training."
+    )
+    parser.add_argument(
+        "--start-over", type=bool, default=False, help="Start over the pipeline."
+    )
+    parser.add_argument(
+        "--only-nerfstudio", type=bool, default=False, help="Use only nerfstudio for the entire pipeline"
+    )
+    parser.add_argument(
+        "--advanced-training", action="store_true", help="Enable advanced settings for training."
+    )
+    parser.add_argument(
+        "--use-mcmc", action="store_true", help="Use MCMC for training."
+    )
+    parser.add_argument(
+        "--num-downscales",
+        type=int,
+        default=8,
+        choices=[1, 2, 4, 8],
+        help="Number of downscales for processing.",
+    )
+    args = parser.parse_args()
     
         
-#     for attempt in range(1, RETRY_LIMIT + 1):
-#         try:
-#             full_pipe(
-#                 video_path=args.video_path,
-#                 frame_output_dir=args.output_dir,
-#                 frame_count=args.frame_count,
-#                 skip_colmap=args.skip_colmap,
-#                 max_num_iterations=args.max_num_iterations,
-#                 start_over=args.start_over,
-#                 only_nerfstudio=args.only_nerfstudio,
-#                 nerfstudio_model=args.nerfstudio_model,
-#                 advanced_training=args.advanced_training,
-#                 use_mcmc=args.use_mcmc,
-#                 num_downscales=args.num_downscales,
-#             )
-#             print("Pipeline completed successfully.")
-#             break  # Exit the loop if successful
-#         except Exception as e:
-#             print(f"Attempt {attempt} failed: {e}")
-#             if attempt <= RETRY_LIMIT:
-#                 print(f"Retrying in {RETRY_COOLDOWN} seconds...")
-#                 time.sleep(RETRY_COOLDOWN)
-#             else:
-#                 print("Max attempts reached. Exiting.")
-#                 raise e
+    for attempt in range(1, RETRY_LIMIT + 1):
+        try:
+            full_pipe(
+                video_path=args.video_path,
+                frame_output_dir=args.output_dir,
+                frame_count=args.frame_count,
+                skip_colmap=args.skip_colmap,
+                max_num_iterations=args.max_num_iterations,
+                start_over=args.start_over,
+                only_nerfstudio=args.only_nerfstudio,
+                nerfstudio_model=args.nerfstudio_model,
+                advanced_training=args.advanced_training,
+                use_mcmc=args.use_mcmc,
+                num_downscales=args.num_downscales,
+            )
+            print("Pipeline completed successfully.")
+            break  # Exit the loop if successful
+        except Exception as e:
+            print(f"Attempt {attempt} failed: {e}")
+            if attempt <= RETRY_LIMIT:
+                print(f"Retrying in {RETRY_COOLDOWN} seconds...")
+                time.sleep(RETRY_COOLDOWN)
+            else:
+                print("Max attempts reached. Exiting.")
+                raise e
 

@@ -164,7 +164,7 @@ LABEL org.opencontainers.image.documentation="https://docs.nerf.studio/"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends --no-install-suggests \
-    libboost-filesystem1.74.0 libboost-program-options1.74.0 libc6 libceres2 libfreeimage3 \
+    git libboost-filesystem1.74.0 libboost-program-options1.74.0 libc6 libceres2 libfreeimage3 \
     libgcc-s1 libgl1 libglew2.2 libgoogle-glog0v5 libqt5core5a libqt5gui5 libqt5widgets5 \
     python3.10 python3.10-dev build-essential python-is-python3 ffmpeg \
     libopencv-core4.5d libtbb2 libjpeg-dev libpng-dev libtiff-dev && \
@@ -185,8 +185,8 @@ RUN /bin/bash -c 'ns-install-cli --mode install'
 RUN /bin/bash -c "conda init"
 RUN /bin/bash -c "pip install 'fastapi[standard]' minio boto3"
 
-# CMD ["/bin/bash", "-l"]
-EXPOSE 8000
-
 WORKDIR /full_pipe_mast3r_nerfstudio
-CMD ["fastapi", "run", "main.py", "--port", "8090", "--host", "0.0.0.0"]
+CMD ["/bin/bash", "-l"]
+# EXPOSE 8000
+
+# CMD ["fastapi", "run", "main.py", "--port", "8090", "--host", "0.0.0.0"]
