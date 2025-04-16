@@ -189,4 +189,4 @@ RUN /bin/bash -c "pip install 'fastapi[standard]' minio boto3"
 EXPOSE 8000
 
 WORKDIR /full_pipe_mast3r_nerfstudio
-CMD ["fastapi", "run", "main.py", "--port", "8000", "--host", "0.0.0.0"]
+CMD ["fastapi", "run", "main.py", "--port", "8090", "--host", "0.0.0.0"]

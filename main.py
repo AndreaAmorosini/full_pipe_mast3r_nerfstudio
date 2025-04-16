@@ -110,7 +110,7 @@ async def extract_ply(request: Request) -> Response:
         frame_count = 400
         max_num_iterations = 100000
         nerfstudio_model = "splatfacto-big" if request.training_type == "full" else "splatfacto"
-        num_downscales = 2 if request.training_type == "full" else 4
+        num_downscales = 2 if request.training_type == "full" else 8
         
         #RUN THE FULL PIPELINE            
         for attempt in range(1, RETRY_LIMIT + 1):
@@ -124,7 +124,7 @@ async def extract_ply(request: Request) -> Response:
                     advanced_training = True if request.training_type == "full" else False,
                     use_mcmc = True if request.training_type == "full" else False,
                     num_downscales=num_downscales,
-                    #DA RIMODIFICARE IN TRUE
+                    #TODO DA RIMODIFICARE IN TRUE
                     start_over=False,
                 )
                 print("Pipeline completed successfully.")
@@ -153,7 +153,6 @@ async def extract_ply(request: Request) -> Response:
     
     except Exception as e:
         raise CustomHTTPException(
-            print(str(e)),
             status_code=500,
             detail=str(e),
             error_code=1001
