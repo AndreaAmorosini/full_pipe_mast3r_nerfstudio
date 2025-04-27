@@ -197,8 +197,26 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
     print("Total time: ", time.strftime("%H:%M:%S", time.gmtime(frame_extract_time + mast3r_processing_time + training_time)))
     
     #DELETE ALL TEMP CONTENTS FROM FOLDERS
-    shutil.rmtree("/root/.cache")
-    shutil.rmtree("/tmp")
+    for f in os.listdir("/root/.cache"):
+        file_path = os.path.join("/root/.cache", f)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
+    
+    for f in os.listdir("/tmp"):
+        file_path = os.path.join("/tmp", f)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
+            
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Complete Gaussian Splatting pipeline.")
