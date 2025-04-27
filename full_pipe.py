@@ -63,16 +63,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
         else:
             print(f"Output directory {frame_output_dir} exists but is empty. Continuing.")
     
-    # Step 1: Extract frames from video
-    # frame_extract_cmd = [
-    #     "sfextract",
-    #     video_path,  
-    #     "--frame-count",
-    #     frame_count,
-    #     "--output",
-    #     frame_output_dir,
-    # ]
-    
+    # Step 1: Extract frames from video    
     frame_extract_cmd = [
         "python",
         "nerfstudio_commands.py",
@@ -204,7 +195,11 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
     print(f"Nerfstudio training time: {time.strftime('%H:%M:%S', time.gmtime(training_time))}")
     print("Full pipeline complete.")
     print("Total time: ", time.strftime("%H:%M:%S", time.gmtime(frame_extract_time + mast3r_processing_time + training_time)))
-
+    
+    #DELETE ALL TEMP CONTENTS FROM FOLDERS
+    shutil.rmtree("/root/.cache")
+    shutil.rmtree("/tmp")
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Complete Gaussian Splatting pipeline.")
     parser.add_argument(

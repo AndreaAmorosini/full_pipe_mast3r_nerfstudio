@@ -67,9 +67,14 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
             "--pipeline.model.cull-alpha-thresh", "0.005",
             "--pipeline.model.use-scale-regularization", "True",
             "--pipeline.model.camera-optimizer.mode", "SO3xR3",
+            "--pipeline.model.use-bilateral-grid", "True",
+            "--pipeline.datamanager.train-cameras-sampling-strategy", "fps",
+            "--pipeline.model.cull-scale-thresh", "0.5",
+            "--pipeline.model.densify-grad-thresh", "0.0008",
+            "--pipeline.model.densify-size-thresh", "0.01",
         ])
         
-    if use_mcmc:
+    if use_mcmc and model in ["splatfacto", "splatfacto-big"]:
         train_cmd.extend([
             "--pipeline.model.strategy", "mcmc",
             "--pipeline.model.noise-lr", "500000.0",
@@ -126,6 +131,7 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     
     # --center-method {poses, foucs, none} provare none (dopo nerfstudio-data)
     
+
     run_command(train_cmd)
     
     config_file_path = f"{model_output_path}"
