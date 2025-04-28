@@ -19,7 +19,7 @@ MINIO_EDNPOINT = "http://minio:9000"
 MINIO_ROOT_USER = "minioadmin"
 MINIO_ROOT_PASSWORD = "minioadmin123"
 AWS_STORAGE_BUCKET_NAME = "lessons-media"
-CALLBACK_ENDPOINT = "http://localhost:8000/callback"
+CALLBACK_ENDPOINT = "http://web:8000/complete_build"
 
 class CustomHTTPException(HTTPException):
     def __init__(self, status_code: int, detail: str, error_code: int):
@@ -85,7 +85,7 @@ def write_s3_file(file_path, remote_path):
         
 def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
     output_dir = f"{lesson_dir}/images"
-    frame_count = 400
+    frame_count = 600
     max_num_iterations = 100000
     nerfstudio_model = "splatfacto-big" if request.training_type == "full" else "splatfacto"
     num_downscales = 2 if request.training_type == "full" else 8
@@ -97,12 +97,12 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
                 full_pipe(
                     video_path=video_path,
                     frame_output_dir=output_dir,
-                    frame_count=frame_count,
+                    frame_count=frame_count if attempt == 1 else 400,
                     max_num_iterations=max_num_iterations,
                     nerfstudio_model=nerfstudio_model,
                     advanced_training = True if request.training_type == "full" else False,
                     use_mcmc = True if request.training_type == "full" else False,
-                    num_downscales=num_downscales,
+                    num_downscales=num_downscales if attempt == 1 else 4,
                     #TODO DA RIMODIFICARE IN TRUE
                     start_over=True,
                 )
@@ -133,7 +133,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
         callback_payload = {
             "lesson_id": request.lesson_id,
             "lesson_name": request.lesson_name,
-            "ply_url": f"{request.lesson_name}_{request.lesson_id}/splat.ply",
+            "ply_path": f"{request.lesson_name}_{request.lesson_id}/splat.ply",
             "status": "completed",
         }
         
@@ -151,7 +151,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
         callback_payload = {
             "lesson_id": request.lesson_id,
             "lesson_name": request.lesson_name,
-            "ply_url": None,
+            "ply_path": None,
             "status": "failed",
         }
         
