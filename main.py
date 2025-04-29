@@ -173,6 +173,7 @@ async def read_root():
 @app.post("/extract_ply")
 async def extract_ply(request: Request) -> Response:
     try:
+        print(f"REQUEST: {request}")
         #CREATE A DIRECTORY FOR THE LESSON
         lesson_dir = f"/lessons/{request.lesson_name}_{request.lesson_id}"
         os.makedirs(lesson_dir, exist_ok=True)        
