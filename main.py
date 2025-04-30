@@ -7,12 +7,12 @@ from pydantic import BaseModel
 from full_pipe import full_pipe
 from fastapi.middleware.cors import CORSMiddleware
 import time
-import minio
 import boto3
 from urllib.parse import urlparse
 import shutil
 import requests
 import threading
+import subprocess
 
 
 MINIO_EDNPOINT = "http://minio:9000"
@@ -42,6 +42,7 @@ RETRY_LIMIT = 3
 RETRY_COUNTER = 0
 RETRY_COOLDOWN = 180  # seconds
 
+
 app = FastAPI()
 
 # origins = ["http://localhost", "http://localhost:8000", "*"]
@@ -53,6 +54,7 @@ app = FastAPI()
 #     allow_methods=["*"],
 #     allow_headers=["*"],
 # )
+
 
 s3 = boto3.client(
     's3',
@@ -83,6 +85,50 @@ def write_s3_file(file_path, remote_path):
     except Exception as e:
         print(f"Error writing file {file_path} to S3: {e}")
         
+def run_pipeline_subproc(
+    video_path: str,
+    output_dir: str,
+    frame_count: int,
+    max_num_iterations: int,
+    nerfstudio_model: str,
+    advanced_training: bool,
+    use_mcmc: bool,
+    num_downscales: int,
+    start_over: bool
+):
+    cmd = [
+        "python", "full_pipe.py",
+        "--video-path", video_path,
+        "--output-dir", output_dir,
+        "--frame-count", str(frame_count),
+        "--max-num-iterations", max_num_iterations,
+        "--nerfstudio-model", nerfstudio_model,
+        "--num-downscales", num_downscales,
+        "--start-over", str(start_over),
+    ]
+    if advanced_training:
+        cmd.append("--advanced-training")
+    if use_mcmc:
+        cmd.append("--use-mcmc")
+    print("Running command:", " ".join(cmd))
+    
+    for attempt in range(1, RETRY_LIMIT + 1):
+        print(f"Attempt {attempt} to run pipeline")
+        try:
+            subprocess.run(cmd, check=True)
+            return
+        except subprocess.CalledProcessError as e:
+            print(f"Attempt {attempt} failed: {e}")
+        except Exception as e:
+            print(f"Attempt {attempt} failed: {e}")
+            
+        if attempt < RETRY_LIMIT:
+            print(f"Retrying in {RETRY_COOLDOWN} seconds...")
+            time.sleep(RETRY_COOLDOWN)
+        else:
+            raise RuntimeError("Max attempts reached. Exiting.")
+
+        
 def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
     output_dir = f"{lesson_dir}/images"
     frame_count = 600
@@ -91,31 +137,18 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
     num_downscales = 2 if request.training_type == "full" else 8
     
     try:
-        #RUN THE FULL PIPELINE            
-        for attempt in range(1, RETRY_LIMIT + 1):
-            try:
-                full_pipe(
-                    video_path=video_path,
-                    frame_output_dir=output_dir,
-                    frame_count=frame_count if attempt == 1 else 400,
-                    max_num_iterations=max_num_iterations,
-                    nerfstudio_model=nerfstudio_model,
-                    advanced_training = True if request.training_type == "full" else False,
-                    use_mcmc = True if request.training_type == "full" else False,
-                    num_downscales=num_downscales if attempt == 1 else 4,
-                    #TODO DA RIMODIFICARE IN TRUE
-                    start_over=True,
-                )
-                print("Pipeline completed successfully.")
-                break  # Exit the loop if successful
-            except Exception as e:
-                print(f"Attempt {attempt} failed: {e}")
-                if attempt <= RETRY_LIMIT:
-                    print(f"Retrying in {RETRY_COOLDOWN} seconds...")
-                    time.sleep(RETRY_COOLDOWN)
-                else:
-                    print("Max attempts reached. Exiting.")
-                    raise e
+        # RUN THE FULL PIPELINE
+        run_pipeline_subproc(
+            video_path=video_path,
+            output_dir=output_dir,
+            frame_count=frame_count,
+            max_num_iterations=max_num_iterations,
+            nerfstudio_model=nerfstudio_model,
+            advanced_training = True if request.training_type == "full" else False,
+            use_mcmc = True if request.training_type == "full" else False,
+            num_downscales=num_downscales,
+            start_over=True,
+        )
 
         splat_path = (
             f"/lessons/{request.lesson_name}_{request.lesson_id}/splat/splat.ply"
@@ -198,17 +231,21 @@ async def extract_ply(request: Request) -> Response:
         )
         worker_thread.start()
         
-        time.sleep(120)
-        if worker_thread.is_alive():
-            return Response(
-                message="Processing started. You will be notified once it is completed."
-            )
-        else:
-            raise CustomHTTPException(
-                status_code=500,
-                detail="Processing failed",
-                error_code=1002
-            )
+        return Response(
+            message="Processing started. You will be notified once it is completed."
+        )
+        
+        # time.sleep(120)
+        # if worker_thread.is_alive():
+        #     return Response(
+        #         message="Processing started. You will be notified once it is completed."
+        #     )
+        # else:
+        #     raise CustomHTTPException(
+        #         status_code=500,
+        #         detail="Processing failed",
+        #         error_code=1002
+        #     )
     
     except Exception as e:
         raise CustomHTTPException(
