@@ -104,7 +104,7 @@ def run_pipeline_subproc(
         "--max-num-iterations", max_num_iterations,
         "--nerfstudio-model", nerfstudio_model,
         "--num-downscales", num_downscales,
-        "--start-over", str(start_over),
+        "--start-over", True if start_over else False,
     ]
     if advanced_training:
         cmd.append("--advanced-training")
@@ -141,7 +141,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
         run_pipeline_subproc(
             video_path=video_path,
             output_dir=output_dir,
-            frame_count=frame_count,
+            frame_count=str(frame_count),
             max_num_iterations=max_num_iterations,
             nerfstudio_model=nerfstudio_model,
             advanced_training = True if request.training_type == "full" else False,
