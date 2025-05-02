@@ -208,7 +208,7 @@ def main():
         "--output-dir", type=str, required=True, help="Directory for processed data."
     )
     parser.add_argument(
-        "--frame-count", type=str, help="Path to the COLMAP model directory."
+        "--frame-count", type=str, help="Number of Frame to extract."
     )
     parser.add_argument(
         "--skip-colmap", action="store_true", help="Skip COLMAP processing."

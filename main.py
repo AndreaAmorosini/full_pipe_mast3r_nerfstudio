@@ -19,7 +19,7 @@ MINIO_EDNPOINT = "http://minio:9000"
 MINIO_ROOT_USER = "minioadmin"
 MINIO_ROOT_PASSWORD = "minioadmin123"
 AWS_STORAGE_BUCKET_NAME = "lessons-media"
-CALLBACK_ENDPOINT = "http://web:8000/complete_build"
+CALLBACK_ENDPOINT = "http://web:80/complete_build"
 
 class CustomHTTPException(HTTPException):
     def __init__(self, status_code: int, detail: str, error_code: int):
@@ -101,10 +101,10 @@ def run_pipeline_subproc(
         "--video-path", video_path,
         "--output-dir", output_dir,
         "--frame-count", str(frame_count),
-        "--max-num-iterations", max_num_iterations,
+        "--max-num-iterations", str(max_num_iterations),
         "--nerfstudio-model", nerfstudio_model,
-        "--num-downscales", num_downscales,
-        "--start-over", True if start_over else False,
+        "--num-downscales", str(num_downscales),
+        "--start-over", "True" if start_over else "False",
     ]
     if advanced_training:
         cmd.append("--advanced-training")
