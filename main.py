@@ -96,25 +96,26 @@ def run_pipeline_subproc(
     num_downscales: int,
     start_over: bool
 ):
-    cmd = [
-        "python", "full_pipe.py",
-        "--video-path", video_path,
-        "--output-dir", output_dir,
-        "--frame-count", str(frame_count),
-        "--max-num-iterations", str(max_num_iterations),
-        "--nerfstudio-model", nerfstudio_model,
-        "--num-downscales", str(num_downscales),
-        "--start-over", "True" if start_over else "False",
-    ]
-    if advanced_training:
-        cmd.append("--advanced-training")
-    if use_mcmc:
-        cmd.append("--use-mcmc")
-    print("Running command:", " ".join(cmd))
     
     for attempt in range(1, RETRY_LIMIT + 1):
         print(f"Attempt {attempt} to run pipeline")
         try:
+            cmd = [
+                "python", "full_pipe.py",
+                "--video-path", video_path,
+                "--output-dir", output_dir,
+                "--frame-count", str(frame_count if attempt == 1 else 400),
+                "--max-num-iterations", str(max_num_iterations),
+                "--nerfstudio-model", nerfstudio_model,
+                "--num-downscales", str(num_downscales if attempt == 1 and num_downscales < 8 else 4),
+                "--start-over", "True" if start_over else "False",
+            ]
+            if advanced_training:
+                cmd.append("--advanced-training")
+            if use_mcmc:
+                cmd.append("--use-mcmc")
+            print("Running command:", " ".join(cmd))                
+
             subprocess.run(cmd, check=True)
             return
         except subprocess.CalledProcessError as e:
@@ -132,7 +133,7 @@ def run_pipeline_subproc(
 def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
     output_dir = f"{lesson_dir}/images"
     frame_count = 600
-    max_num_iterations = 100000
+    max_num_iterations = 100000 if request.training_type == "full" else 30000
     nerfstudio_model = "splatfacto-big" if request.training_type == "full" else "splatfacto"
     num_downscales = 2 if request.training_type == "full" else 8
     
