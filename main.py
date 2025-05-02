@@ -141,7 +141,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
         run_pipeline_subproc(
             video_path=video_path,
             output_dir=output_dir,
-            frame_count=str(frame_count),
+            frame_count=frame_count,
             max_num_iterations=max_num_iterations,
             nerfstudio_model=nerfstudio_model,
             advanced_training = True if request.training_type == "full" else False,
@@ -232,21 +232,21 @@ async def extract_ply(request: Request) -> Response:
         )
         worker_thread.start()
         
-        return Response(
-            message="Processing started. You will be notified once it is completed."
-        )
+        # return Response(
+        #     message="Processing started. You will be notified once it is completed."
+        # )
         
-        # time.sleep(120)
-        # if worker_thread.is_alive():
-        #     return Response(
-        #         message="Processing started. You will be notified once it is completed."
-        #     )
-        # else:
-        #     raise CustomHTTPException(
-        #         status_code=500,
-        #         detail="Processing failed",
-        #         error_code=1002
-        #     )
+        time.sleep(20)
+        if worker_thread.is_alive():
+            return Response(
+                message="Processing started. You will be notified once it is completed."
+            )
+        else:
+            raise CustomHTTPException(
+                status_code=500,
+                detail="Processing failed",
+                error_code=1002
+            )
     
     except Exception as e:
         raise CustomHTTPException(
