@@ -187,7 +187,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
             "lesson_id": request.lesson_id,
             "lesson_name": request.lesson_name,
             "ply_path": f"{request.lesson_name}_{request.lesson_id}/splat.ply",
-            "status": "completed",
+            "status": "COMPLETED",
         }
         
         headers = {
@@ -210,7 +210,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
             "lesson_id": request.lesson_id,
             "lesson_name": request.lesson_name,
             "ply_path": None,
-            "status": "failed",
+            "status": "FAILED",
         }
         
         token_payload = {
