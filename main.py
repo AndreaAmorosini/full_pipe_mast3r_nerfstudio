@@ -141,34 +141,34 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
     
     try:
         # RUN THE FULL PIPELINE
-        # run_pipeline_subproc(
-        #     video_path=video_path,
-        #     output_dir=output_dir,
-        #     frame_count=frame_count,
-        #     max_num_iterations=max_num_iterations,
-        #     nerfstudio_model=nerfstudio_model,
-        #     advanced_training = True if request.training_type == "full" else False,
-        #     use_mcmc = True if request.training_type == "full" else False,
-        #     num_downscales=num_downscales,
-        #     start_over=True,
-        # )
+        run_pipeline_subproc(
+            video_path=video_path,
+            output_dir=output_dir,
+            frame_count=frame_count,
+            max_num_iterations=max_num_iterations,
+            nerfstudio_model=nerfstudio_model,
+            advanced_training = True if request.training_type == "full" else False,
+            use_mcmc = True if request.training_type == "full" else False,
+            num_downscales=num_downscales,
+            start_over=True,
+        )
 
-        # splat_path = (
-        #     f"/lessons/{request.lesson_name}_{request.lesson_id}/splat/splat.ply"
-        # )
+        splat_path = (
+            f"/lessons/{request.lesson_name}_{request.lesson_id}/splat/splat.ply"
+        )
 
-        # # LOAD ON MINIO
-        # write_s3_file(
-        #     splat_path, f"{request.lesson_name}_{request.lesson_id}/splat.ply"
-        # )
+        # LOAD ON MINIO
+        write_s3_file(
+            splat_path, f"{request.lesson_name}_{request.lesson_id}/splat.ply"
+        )
 
-        # # DELETE FOLDER
-        # shutil.rmtree(lesson_dir, ignore_errors=True)
-        # print("Folder deleted")
+        # DELETE FOLDER
+        shutil.rmtree(lesson_dir, ignore_errors=True)
+        print("Folder deleted")
         
-        print("Running full pipeline...")
-        time.sleep(5)  # Simulate processing time
-        # Simulate successful completion of the pipeline
+        # print("Running full pipeline...")
+        # time.sleep(5)  # Simulate processing time
+        # # Simulate successful completion of the pipeline
         
         #REQUEST TOKEN
         token_payload = {
