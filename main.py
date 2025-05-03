@@ -167,7 +167,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
         # print("Folder deleted")
         
         print("Running full pipeline...")
-        time.sleep(5)  # Simulate processing time
+        # time.sleep(5)  # Simulate processing time
         # Simulate successful completion of the pipeline
         
         #REQUEST TOKEN
