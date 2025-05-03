@@ -20,6 +20,7 @@ MINIO_ROOT_USER = "minioadmin"
 MINIO_ROOT_PASSWORD = "minioadmin123"
 AWS_STORAGE_BUCKET_NAME = "lessons-media"
 CALLBACK_ENDPOINT = "http://web:8001/complete_build"
+TOKEN_REQUEST_ENDPOINT = "http://web:8001/api/token"
 
 class CustomHTTPException(HTTPException):
     def __init__(self, status_code: int, detail: str, error_code: int):
@@ -35,6 +36,7 @@ class Request(BaseModel):
     lesson_name: str | None = None
     video_url: str | None = None
     training_type: str | None = None
+    token: str | None = None
     
 
 
@@ -168,6 +170,19 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
         time.sleep(5)  # Simulate processing time
         # Simulate successful completion of the pipeline
         
+        #REQUEST TOKEN
+        token_payload = {
+            "username": "root",
+            "password": "root",
+        }
+        
+        token_response = requests.post(
+            TOKEN_REQUEST_ENDPOINT,
+            json=token_payload,
+        )
+        print("Token response:", token_response.status_code, token_response.text)
+        token_access = token_response.json().get("access")
+        
         callback_payload = {
             "lesson_id": request.lesson_id,
             "lesson_name": request.lesson_name,
@@ -175,10 +190,15 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
             "status": "completed",
         }
         
+        headers = {
+            "Authorization": f"Bearer {token_access}",
+        }
+        
         try:
             response = requests.post(
                 CALLBACK_ENDPOINT,
                 json=callback_payload,
+                headers=headers,
             )
             print("Callback response:", response.status_code, response.text)
         except requests.RequestException as e:
