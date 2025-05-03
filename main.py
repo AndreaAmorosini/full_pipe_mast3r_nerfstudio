@@ -19,7 +19,7 @@ MINIO_EDNPOINT = "http://minio:9000"
 MINIO_ROOT_USER = "minioadmin"
 MINIO_ROOT_PASSWORD = "minioadmin123"
 AWS_STORAGE_BUCKET_NAME = "lessons-media"
-CALLBACK_ENDPOINT = "http://web:8001/complete_build"
+CALLBACK_ENDPOINT = "http://web:8001/complete_build/"
 TOKEN_REQUEST_ENDPOINT = "http://web:8001/api/token/"
 
 class CustomHTTPException(HTTPException):
