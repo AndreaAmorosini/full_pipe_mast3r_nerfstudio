@@ -261,7 +261,7 @@ async def extract_ply(request: Request) -> Response:
         #     message="Processing started. You will be notified once it is completed."
         # )
         
-        time.sleep(20)
+        # time.sleep(20)
         if worker_thread.is_alive():
             return Response(
                 message="Processing started. You will be notified once it is completed."
