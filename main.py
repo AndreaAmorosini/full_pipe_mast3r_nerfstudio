@@ -20,7 +20,7 @@ MINIO_ROOT_USER = "minioadmin"
 MINIO_ROOT_PASSWORD = "minioadmin123"
 AWS_STORAGE_BUCKET_NAME = "lessons-media"
 CALLBACK_ENDPOINT = "http://web:8001/complete_build"
-TOKEN_REQUEST_ENDPOINT = "http://web:8001/api/token"
+TOKEN_REQUEST_ENDPOINT = "http://web:8001/api/token/"
 
 class CustomHTTPException(HTTPException):
     def __init__(self, status_code: int, detail: str, error_code: int):
