@@ -213,10 +213,26 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
             "status": "failed",
         }
         
+        token_payload = {
+            "username": "root",
+            "password": "root",
+        }
+        
         try:
+            token_response = requests.post(
+                TOKEN_REQUEST_ENDPOINT,
+                json=token_payload,
+            )
+            print("Token response:", token_response.status_code, token_response.text)
+            token_access = token_response.json().get("access")
+            headers = {
+                "Authorization": f"Bearer {token_access}",
+            }
+
             response = requests.post(
                 CALLBACK_ENDPOINT,
                 json=callback_payload,
+                headers=headers,
             )
             print("Callback response:", response.status_code, response.text)
         except requests.RequestException as e:
