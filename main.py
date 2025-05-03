@@ -205,7 +205,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
             print(f"Error sending callback: {e}")
             
     except Exception as e:
-        print(f"Error processing full pipeline: {e}")
+        print(f"Error processing full pipeline: {e}", flush=True)
         callback_payload = {
             "lesson_id": request.lesson_id,
             "lesson_name": request.lesson_name,
