@@ -180,7 +180,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
             TOKEN_REQUEST_ENDPOINT,
             json=token_payload,
         )
-        print("Token response:", token_response.status_code, token_response.text)
+        print("Token response:", token_response.status_code, token_response.text, flush=True)
         token_access = token_response.json().get("access")
         
         callback_payload = {
@@ -200,7 +200,7 @@ def process_full_pipe(request: Request, lesson_dir:str, video_path: str):
                 json=callback_payload,
                 headers=headers,
             )
-            print("Callback response:", response.status_code, response.text)
+            print("Callback response:", response.status_code, response.text, flush=True)
         except requests.RequestException as e:
             print(f"Error sending callback: {e}")
             
