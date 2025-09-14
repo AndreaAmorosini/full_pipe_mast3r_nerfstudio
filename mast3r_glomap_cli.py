@@ -11,6 +11,7 @@ import copy
 import PIL.Image
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as pl
+import numpy as np
 
 MAST3R_REPO_PATH = "submodules"
 sys.path.insert(0, MAST3R_REPO_PATH)
@@ -208,6 +209,19 @@ def get_reconstructed_scene(glomap_bin, outdir, model, retrieval_model, device, 
         points3D.append((pts3d.xyz, pts3d.color))
         if idx + 1 == num_points3D:
             break
+        
+    try:
+        P = np.stack([p[0] for p in points3D], axis=0)  # [N,3]
+        center = np.nanmean(P, axis=0)
+        radii = np.linalg.norm(P - center, axis=1)
+        r = np.percentile(radii[np.isfinite(radii)], 90) if radii.size else 1.0
+        suggested_scale = float(1.0 / max(r, 1e-6))
+        with open(os.path.join(outdir, "suggested_dataparser_scale.txt"), "w") as f:
+            f.write(f"{suggested_scale}\n")
+        print(f"[INFO] suggested dataparser scale ~= {suggested_scale:.6f} (p90 radius {r:.6f})")
+    except Exception as e:
+        print(f"[WARN] could not compute suggested_dataparser_scale: {e}")
+        
     scene = GlomapRecon(colmap_world_to_cam, colmap_intrinsics, points3D, images)
     scene_state = GlomapReconState(scene, cache_dir, outfile_name)
     # outfile = get_3D_model_from_scene(silent, scene_state, transparent_cams, cam_size)

@@ -45,6 +45,10 @@ def invoke_command(input_path, output_path, colmap_model_path=None, skip_colmap=
     train_cmd.append("--pipeline.datamanager.cache-images")
     train_cmd.append("cpu")
     
+    if args.dataparser_scale is not None:
+        train_cmd.append("--pipeline.datamanager.dataparser.scale_factor")
+        train_cmd.append(str(args.dataparser_scale))
+    
     if max_num_iterations != 30000:
         train_cmd.append("--max-num-iterations")
         train_cmd.append(str(max_num_iterations))
@@ -191,6 +195,7 @@ if __name__ == "__main__":
     parser.add_argument("--advanced", action="store_true", help="Enable advanced settings for training.")
     parser.add_argument("--use-mcmc", action="store_true", help="Enable MCMC settings for training.")
     parser.add_argument("--num-downscales", type=int, default=8, choices=[1, 2, 4, 8], help="Number of downscales for processing.")
+    parser.add_argument("--dataparser-scale", type=float, default=None)
     args = parser.parse_args()
     if args.frame_extraction:
         frame_extraction_command(args.data_path, args.output_dir.split("/images")[0], args.frame_count)
