@@ -116,7 +116,7 @@ def full_pipe(video_path, frame_output_dir, frame_count, skip_colmap=False,
         "swin",
         "--winsize",
         str(20),
-        # "--win_cyclic",
+        "--win_cyclic",
     ]
     if skip_mast3r_processing is False and only_nerfstudio is False:
         mast3r_start_time = time.time()
