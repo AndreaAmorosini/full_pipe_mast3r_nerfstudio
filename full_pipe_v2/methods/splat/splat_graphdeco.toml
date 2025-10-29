@@ -1,0 +1,42 @@
+name = "splat_graphdeco"
+step_type = "splatting"
+description = "Addestra un modello Gaussian Splatting usando l'implementazione originale di Graph-INRIA."
+
+[installation]
+# Specifichiamo il nome dell'ambiente e il path al file .yml,
+# che sarà disponibile DOPO la clonazione del repository.
+conda_env_name = "splat_graphdeco"
+conda_env_file = "{{method_vendor_dir}}/gaussian-splatting/environment.yml" # Path dinamico
+CUDA_VERSION = "11.6"
+
+# extra_conda_packages = [
+#     "conda-forge::cuda-toolkit=11.8"
+# ]
+
+# Clona il repository nella sua directory vendor. Questo step
+# deve avvenire PRIMA della creazione dell'ambiente.
+git_repos = [
+    { url = "https://github.com/graphdeco-inria/gaussian-splatting.git", branch = "main", path = "gaussian-splatting", recursive = true }
+]
+
+[installation.conda_env_variables]
+CUDA_HOME = "${CONDA_PREFIX}"
+
+[execution]
+# Il comando di esecuzione rimane invariato.
+command = """
+conda run --prefix {{env_path}} python {{method_vendor_dir}}/gaussian-splatting/train.py \
+    -s "{{ inputs.colmap_model_dir }}" \
+    -m "{{ step_output_dir }}/model" \
+    --iterations "{{ config.iterations | default(30000) }}"
+"""
+
+[execution.inputs]
+colmap_model_dir = "string"
+
+[execution.outputs]
+splat_ply = "{{ step_output_dir }}/model/point_cloud/iteration_{{ config.iterations | default(30000) }}/point_cloud.ply"
+primary_output = "splat_ply"
+
+[validation]
+validation_command = "conda run --prefix {{env_path}} python -c 'import torch; print(\"Gaussian Splatting Env OK\")'"
