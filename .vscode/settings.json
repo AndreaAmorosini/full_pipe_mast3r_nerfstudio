@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "mergesort": "c",
+        "partition-quicksort": "bat",
+        "xutility": "cpp"
+    },
+    "files.watcherExclude": {
+        "**/.envs": true,
+        "**/submodules": true,
+        "**/vendor": true
+    },
+    "search.exclude": {
+        "**/.envs": true,
+        "**/vendor": true
+    }
+}
