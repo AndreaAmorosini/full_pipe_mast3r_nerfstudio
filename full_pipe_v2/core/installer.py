@@ -89,6 +89,7 @@ class MethodInstaller:
 
             if env_path:
                 # --- CASO 1: AMBIENTE DEDICATO ---
+                #TODO: da cancellare caso di environment.yml
                 env_file_template = self.install_config.get("conda_env_file")
 
                 if env_file_template:
@@ -116,14 +117,53 @@ class MethodInstaller:
                             pip_deps.extend(dep["pip"])
                         else:
                             conda_deps.append(dep)
-                            
-                    # if platform.system() == "Linux":
-                    #     self.logger.info("Aggiunta dei compilatori Conda (gxx_linux-64)")
-                    #     conda_deps.append("gxx_linux-64")
-                    #     conda_deps.append("gcc_linux-64")
-                    #     conda_deps.append("libxcrypt")
 
-                    # FASE 1: Crea ambiente e installa pacchetti CONDA
+                    # --- INIZIO MODIFICA: Logica di installazione compilatore ---
+                    if platform.system() == "Linux":
+                        self.logger.info(
+                            "Aggiunta dei compilatori nativi (c-compiler, cxx-compiler) e cudatoolkit-dev."
+                        )
+
+                        cuda_version_str = self.install_config.get(
+                            "CUDA_VERSION", "11.8"
+                        )
+
+                        # Mappa delle versioni CUDA -> GCC
+                        CUDA_TO_COMPILER_VERSION = {
+                            "11.6": "9.*",  # Per PyTorch 1.12/1.13
+                            "11.7": "11.*",
+                            "11.8": "11.*",  # Per PyTorch 2.x
+                            "12.0": "12.*",
+                        }
+
+                        compiler_version = CUDA_TO_COMPILER_VERSION.get(
+                            str(cuda_version_str)
+                        )
+
+                        if compiler_version:
+                            self.logger.info(
+                                f"Blocco compilatori alla versione {compiler_version} per CUDA {cuda_version_str}."
+                            )
+                            # Usa i meta-pacchetti 'c-compiler' e 'cxx-compiler' di conda-forge
+                            conda_deps.append(f"c-compiler *_{compiler_version}")
+                            conda_deps.append(f"cxx-compiler *_{compiler_version}")
+                        else:
+                            self.logger.warning(
+                                f"Nessuna versione GCC mappata per CUDA_VERSION='{cuda_version_str}'. Uso meta-pacchetti generici."
+                            )
+                            conda_deps.append("c-compiler")
+                            conda_deps.append("cxx-compiler")
+
+                        conda_deps.append(f"cudatoolkit-dev={cuda_version_str}")
+
+                        if "libxcrypt" not in conda_deps:
+                            conda_deps.append("libxcrypt")
+
+                        if "conda-forge" not in channels:
+                            channels.insert(0, "conda-forge")
+                    # --- FINE MODIFICA ---
+
+                    # FASE 1: Crea ambiente e installa TUTTI i pacchetti CONDA
                     self.logger.info(
                         f"FASE 1: Creazione ambiente e installazione pacchetti Conda: {conda_deps}"
                     )
@@ -134,111 +174,74 @@ class MethodInstaller:
                     )
                     run_command(cmd, self.logger.name, verbose, shell=True)
 
-                    # --- NUOVA LOGICA: Installazione separata dei compilatori ---
-                    if platform.system() == "Linux":
-                        self.logger.info(
-                            "FASE 1.5: Installazione separata dei compilatori Conda (gxx_linux-64, gcc_linux-64)..."
-                        )
-                        # compilers = ["gxx_linux-64", "gcc_linux-64", "libxcrypt"]
-                        compilers = ["compilers", "libxcrypt"]
-                        compilers_str = " ".join(f'"{c}"' for c in compilers)
-                        cmd_compilers = f"conda install --prefix {env_path} {channels_str} {compilers_str} -y"
-                        try:
-                            run_command(
-                                cmd_compilers, self.logger.name, verbose, shell=True
-                            )
-                            gxx_path = env_path / "bin" / "g++"
-                            if not gxx_path.exists():
-                                self.logger.warning(f"Compilatore g++ non trovato in {gxx_path} dopo l'installazione.")
-                                self.logger.warning("La build potrebbe fallire. Potrebbe essere un problema di sincronizzazione con Conda.")
-                            else:
-                                self.logger.info(f"Compilatore g++ verificato con successo in: {gxx_path}")
-                        except Exception as e:
-                            self.logger.warning(
-                                f"Installazione dei compilatori fallita: {e}. La build potrebbe non riuscire."
-                            )
-                    # --- FINE NUOVA LOGICA ---
-
-                    # --- NUOVA LOGICA: assicurarsi che nvcc sia disponibile ---
-                    # Determina versione CUDA richiesta dalle dipendenze (se presente)
-                    # desired_cuda = "11.6"
-                    desired_cuda = self.install_config.get("CUDA_VERSION")
-                    for d in conda_deps:
-                        if "cudatoolkit" in str(d):
-                            parts = str(d).split("=")
-                            if len(parts) > 1 and parts[1].strip():
-                                desired_cuda = parts[1].split()[0].strip()
-                                break
-
-                    nvcc_path = env_path / "bin" / "nvcc"
-                    if not nvcc_path.exists():
-                        self.logger.info(
-                            f"nvcc non trovato in {nvcc_path}. Provo ad installare 'cudatoolkit-dev={desired_cuda}' nel nuovo ambiente..."
-                        )
-                        # Usa i canali già dichiarati (channels_str) per installare cudatoolkit-dev
-                        try:
-                            cmd_ctd = f"conda install --prefix {env_path} {channels_str} -y cudatoolkit-dev={desired_cuda}"
-                            run_command(cmd_ctd, self.logger.name, verbose, shell=True)
-                        except Exception as e:
-                            self.logger.warning(
-                                f"Installazione automatica di cudatoolkit-dev fallita: {e}"
-                            )
-
-                    # Verifica finale nvcc
-                    if not nvcc_path.exists():
-                        self.logger.warning(
-                            "nvcc ancora non trovato nell'ambiente. Le build CUDA richiedono un nvcc compatibile.\n"
-                            "Opzioni:\n"
-                            " - Installare il pacchetto conda 'cudatoolkit-dev' nella stessa env (es. conda install --prefix <env> -c conda-forge cudatoolkit-dev=11.6)\n"
-                            " - Oppure installare system-wide CUDA Toolkit 11.6 e assicurarsi che il suo bin sia in PATH quando si costruisce.\n"
-                            "Nel frattempo l'install fallirà finché nvcc non è disponibile."
-                        )
-                    else:
-                        self.logger.info(f"nvcc trovato: {nvcc_path}")
-                    # --- fine nuova logica ---
-
                     # FASE 2: Installa pacchetti PIP nell'ambiente appena creato
                     if pip_deps:
                         self.logger.info(
                             f"FASE 2: Installazione pacchetti Pip: {pip_deps}"
                         )
-                        # I percorsi nei file .yml sono spesso relativi, quindi impostiamo la CWD
                         cwd = env_file_path.parent
-                        
-                        # --- NUOVA LOGICA PER FORZARE LE VARIABILI D'AMBIENTE ---
-                        # Costruisce le variabili d'ambiente per isolare CUDA
+
+                        # --- INIZIO MODIFICA: Isolamento ambiente per pip ---
                         env_vars = os.environ.copy()
                         env_bin_path = env_path / "bin"
+                        env_lib_path = env_path / "lib"
+                        env_include_path = env_path / "include"
+
                         original_path = env_vars.get("PATH", "")
-                        
-                        # Prepend del path dell'ambiente a PATH
                         env_vars["PATH"] = f"{env_bin_path}{os.pathsep}{original_path}"
-                        # Imposta CUDA_HOME in modo esplicito
+
                         env_vars["CUDA_HOME"] = str(env_path)
-                        
-                        if platform.system() == "Linux":
-                            env_vars["CC"] = str(env_bin_path / "gcc")
-                            env_vars["CXX"] = str(env_bin_path / "g++")
-                        
-                        self.logger.debug(f"Variabile CUDA_HOME forzata a: {env_vars['CUDA_HOME']}")
-                        self.logger.debug(f"Variabile CC forzata a: {env_vars.get('CC')}")
-                        self.logger.debug(f"Nuova Variabile CXX forzata a: {env_vars.get('CXX')}")
+                        env_vars["TORCH_CUDA_ARCH_LIST"] = "7.5 8.6 8.9"
+
+                        original_include = env_vars.get("CPLUS_INCLUDE_PATH", "")
+                        env_vars["CPLUS_INCLUDE_PATH"] = (
+                            f"{env_include_path}{os.pathsep}{original_include}"
+                        )
+
+                        original_lib = env_vars.get("LIBRARY_PATH", "")
+                        env_vars["LIBRARY_PATH"] = (
+                            f"{env_lib_path}{os.pathsep}{original_lib}"
+                        )
+
+                        original_ld_lib = env_vars.get("LD_LIBRARY_PATH", "")
+                        env_vars["LD_LIBRARY_PATH"] = (
+                            f"{env_lib_path}{os.pathsep}{original_ld_lib}"
+                        )
+
+                        # --- MODIFICA CHIAVE 1: Azzeramento PYTHONPATH ---
+                        env_vars["PYTHONPATH"] = ""
+
+                        self.logger.debug(
+                            f"Variabile CUDA_HOME forzata a: {env_vars['CUDA_HOME']}"
+                        )
+                        self.logger.debug(
+                            f"Variabile CPLUS_INCLUDE_PATH forzata a: {env_vars.get('CPLUS_INCLUDE_PATH')}"
+                        )
+                        self.logger.debug(
+                            f"Variabile LIBRARY_PATH forzata a: {env_vars.get('LIBRARY_PATH')}"
+                        )
+                        self.logger.debug(f"Variabile PYTHONPATH azzerata.")
                         self.logger.debug(f"Nuova variabile PATH: {env_vars['PATH']}")
-                        # --- FINE NUOVA LOGICA ---
-                        
+                        # --- FINE MODIFICA ---
+
                         for pkg in pip_deps:
-                            # Renderizza eventuali template nel path del pacchetto pip
                             pkg_path = self._render_template(pkg, template_vars)
                             self.logger.info(f"Installazione pip: {pkg_path}")
-                            # cmd = f'conda run --prefix {env_path} python -m pip install "{pkg_path}"'
-                            
-                            python_executable = env_path / "bin" / "python"
-                            cmd = f'"{python_executable}" -u -m pip install -v "{pkg_path}"'
-                            
-                            run_command(
-                                cmd, self.logger.name, verbose, shell=True, cwd=cwd, env=env_vars
-                            )
 
+                            python_executable = env_path / "bin" / "python"
+
+                            # --- MODIFICA CHIAVE 2: Aggiunta flag -s ---
+                            # -s = Non aggiungere il site-packages dell'utente a sys.path
+                            cmd = f'"{python_executable}" -s -u -m pip install -v "{pkg_path}"'
+
+                            run_command(
+                                cmd,
+                                self.logger.name,
+                                verbose,
+                                shell=True,
+                                cwd=cwd,
+                                env=env_vars,
+                            )
                 else:
                     # Sottocaso B: Installazione da liste nel .toml (per metodi semplici)
                     self.logger.info(
@@ -250,18 +253,74 @@ class MethodInstaller:
                             for c in self.install_config.get("conda_channels", [])
                         ]
                     )
-                    packages = " ".join(self.install_config.get("conda_packages", []))
+
+                    packages_list = self.install_config.get("conda_packages", [])
+                    if platform.system() == "Linux":
+                        self.logger.info(
+                            "Aggiunta dei compilatori nativi (c-compiler, cxx-compiler)."
+                        )
+                        packages_list.extend(["c-compiler", "cxx-compiler"])
+                        if "conda-forge" not in channels:
+                            channels = f"-c conda-forge {channels}"
+                    packages = " ".join(f'"{p}"' for p in packages_list)
+
                     if packages:
                         cmd = (
                             f"conda create --prefix {env_path} {channels} {packages} -y"
                         )
                         run_command(cmd, self.logger.name, verbose, shell=True)
 
-                    for pkg_template in self.install_config.get("pip_packages", []):
-                        pkg = self._render_template(pkg_template, template_vars)
-                        self.logger.info(f"Installazione pacchetto Pip: {pkg}")
-                        cmd = f'conda run --prefix {env_path} pip install "{pkg}"'
-                        run_command(cmd, self.logger.name, verbose, shell=True)
+                for pkg_template in self.install_config.get("pip_packages", []):
+                    pkg_full_string = self._render_template(pkg_template, template_vars)
+                    self.logger.info(f"Installazione pacchetto Pip: {pkg_full_string}")
+
+                    # --- INIZIO MODIFICA: Parsing dei flag pip ---
+                    import shlex
+                    parts = shlex.split(pkg_full_string)
+                    
+                    packages_to_install = []
+                    pip_flags = []
+
+                    for part in parts:
+                        if part.startswith('--'):
+                            # Se la parte è un flag (es. --index-url), la aggiungiamo ai flag
+                            # e assumiamo che la parte successiva sia il suo valore
+                            pip_flags.append(part)
+                        elif pip_flags and pip_flags[-1].startswith('--'):
+                            # Se l'elemento precedente era un flag, questo è il suo valore
+                            pip_flags.append(part)
+                        else:
+                            # Altrimenti, è un nome di pacchetto
+                            packages_to_install.append(part)
+                    
+                    python_executable = env_path / "bin" / "python"
+                    
+                    # Ricostruisci il comando correttamente
+                    cmd_list = [
+                        str(python_executable),
+                        "-s","-u", "-m", "pip", "install", "-v"
+                    ]
+                    cmd_list.extend(packages_to_install)
+                    cmd_list.extend(pip_flags)
+                    
+                    # Converti la lista in una stringa per run_command con shell=True
+                    cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd_list)
+                    # --- FINE MODIFICA ---
+
+                    env_vars = os.environ.copy()
+                    env_vars["PATH"] = (
+                        f"{env_path / 'bin'}{os.pathsep}{env_vars.get('PATH', '')}"
+                    )                        
+                    # env_vars["CUDA_HOME"] = str(env_path)
+                    # env_vars["LD_LIBRARY_PATH"] = (
+                    #     f"{env_path / 'lib'}{os.pathsep}{env_vars.get('LD_LIBRARY_PATH', '')}"
+                    # )
+                    # --- MODIFICA CHIAVE 1: Azzeramento PYTHONPATH ---
+                    env_vars["PYTHONPATH"] = ""
+
+                    run_command(
+                        cmd, self.logger.name, verbose, shell=True, env=env_vars
+                    )
 
             else:
                 # --- CASO 2: AMBIENTE ATTIVO (BASE) ---
@@ -279,15 +338,17 @@ class MethodInstaller:
                 for pkg_template in pip_packages:
                     pkg = self._render_template(pkg_template, {})
                     self.logger.info(f"Installazione pacchetto Pip: {pkg}")
-                    cmd = f'python -u -m pip install "{pkg}"'
+                    # --- MODIFICA CHIAVE 2: Aggiunta --ignore-installed ---
+                    # Anche qui, -s per sicurezza
+                    cmd = f'python -s -u -m pip install "{pkg}"'
                     run_command(cmd, self.logger.name, verbose, shell=True)
 
             # Esegui comandi di build finali, se presenti
             for cmd_template in self.install_config.get("build_commands", []):
                 cmd = self._render_template(cmd_template, template_vars)
                 self.logger.info(f"Esecuzione comando di build: {cmd}")
-                # Usa conda run se l'ambiente è dedicato
                 if env_path:
+                    # 'conda run' è ok qui perché le estensioni sono già compilate.
                     run_cmd = f"conda run --prefix {env_path} {cmd}"
                     run_command(
                         run_cmd,
