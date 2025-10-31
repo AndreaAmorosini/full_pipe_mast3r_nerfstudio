@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Tuple
 import jinja2
 import typer
+import sys
 
 
 class Validator:
@@ -65,6 +66,8 @@ class Validator:
             # Prepara le variabili per il template (solo env_path)
             vars = {}
             env_name = config.get("installation", {}).get("conda_env_name")
+            cmd_base = self.jinja_env.from_string(cmd_template).render(vars)
+
             if env_name:
                 env_path = (self.project_root / ".envs" / env_name).resolve()
                 if not env_path.exists():
@@ -73,9 +76,10 @@ class Validator:
                     )
                     return False
                 vars["env_path"] = str(env_path)
-
-            cmd = self.jinja_env.from_string(cmd_template).render(vars)
-
+                cmd = f"conda run --prefix {env_path} {cmd_base}"
+            else:
+                cmd = f"conda run --no-capture-output {cmd_base}"
+            
             logging.debug(f"Validazione {name} con: {cmd}")
             subprocess.run(
                 cmd, shell=True, check=True, capture_output=not verbose, text=True

@@ -1,26 +1,48 @@
-name = "nerfstudio-commands"
+name = "nerfstudio_commands"
 step_type = "nerf" # Questo può essere usato per più step (process, train, export)
 description = "Wrapper per nerfstudio_commands.py (process, train, export)."
 
 [installation]
 # Crea un ambiente locale isolato per Nerfstudio e le sue dipendenze
 conda_env_name = "nerfstudio_env"
-conda_channels = ["pytorch", "nvidia", "conda-forge"]
+conda_channels = ["pytorch", "nvidia", "conda-forge", "defaults"]
 conda_packages = [
     "python=3.10",
-    "pycolmap==0.6.1", # Dipendenza di ns-process-data
-    "pyceres==2.1"
+    "pip",
+    "cuda-toolkit=11.8",  # Meta-pacchetto che installa sia cudatoolkit che cudatoolkit-dev
+    "nvidia/label/cuda-11.8.0::cuda-nvcc",
 ]
 
 # Installa Pytorch, tcnn, gsplat, nerfstudio, ecc.
 pip_packages = [
-    "torch==2.1.2+cu118", # Dal Dockerfile
-    "torchvision==0.16.2+cu118", # Dal Dockerfile
-    "git+https://github.com/NVlabs/tiny-cuda-nn/tree/master/bindings/torch", # Dal Dockerfile
-    "git+https://github.com/cvg/Hierarchical-Localization.git", # hloc, dal Dockerfile
-    "git+https://github.com/nerfstudio-project/gsplat.git", # v1.0.0 è un esempio, il tuo Dockerfile usa una versione dinamica
-    "nerfstudio", # Installa la versione base
-    "git+https://github.com/KevinXu02/splatfacto-w" # Dal Dockerfile
+    "torch==2.1.2+cu118 torchvision==0.16.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118", # Dal Dockerfile
+    "ninja",
+]
+
+# Questa sezione compila i pacchetti C++/CUDA in .whl isolati.
+[installation.docker_builder]
+enabled = true
+
+# Immagine Docker da usare per la build (Ubuntu 22.04, Cuda 11.8)
+# È fondamentale che sia compatibile con l'host (stessa glibc/cuda)
+image = "nvidia/cuda:11.8.0-devel-ubuntu22.04"
+
+# Comandi da eseguire nel container *prima* di compilare i wheel.
+# Installiamo le dipendenze di build: python, pip, ninja, git, e torch.
+setup_commands = [
+    "apt-get update && apt-get install -y python3.10 python3-pip ninja-build git",
+    "pip install torch==2.1.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118"
+]
+
+# Pacchetti da compilare. L'installer.py li copierà e compilerà in /tmp
+build_pip_packages = [
+    "git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch",
+    "git+https://github.com/nerfstudio-project/gsplat.git"
+]
+
+post_install_commands = [
+    "pip install nerfstudio",
+    "ns-install-cli",
 ]
 
 [execution]

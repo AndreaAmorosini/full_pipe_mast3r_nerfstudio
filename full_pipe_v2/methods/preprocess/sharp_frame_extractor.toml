@@ -3,9 +3,20 @@ step_type = "processing"
 description = "Estrae i frame da un video utilizzando sharp-frame-extractor."
 
 [installation]
+conda_env_name = "sharp_frame_extractor"
 # Questo pacchetto verrà installato nell'ambiente conda principale 'splat_pipe'
 # Non necessita di un ambiente dedicato.
+
+conda_channels = [
+    "conda-forge",
+    "pytorch", 
+    "nvidia", 
+    "defaults"
+]
+
 conda_packages = [
+    "python=3.10", # Stabile e compatibile
+    "pip",
     "ffmpeg"
 ]
 pip_packages = [

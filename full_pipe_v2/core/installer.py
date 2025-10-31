@@ -1,10 +1,11 @@
 import toml
 import logging
 import jinja2
-import yaml
 import os
 import platform
 import tempfile
+import shutil
+import shlex
 from pathlib import Path
 from .utils import run_command
 # L'import viene fatto localmente per evitare dipendenze circolari
@@ -57,12 +58,164 @@ class MethodInstaller:
         except Exception as e:
             self.logger.error(f"Pulizia per '{self.name}' fallita: {e}")
 
+    # --- FUNZIONE MODIFICATA ---
+    def _run_docker_build(
+        self, builder_config: dict, template_vars: dict, verbose: bool
+    ) -> Path:
+        """
+        Esegue la compilazione in un container Docker isolato
+        e ritorna il percorso alla directory con i wheel.
+        """
+        self.logger.info("Avvio build isolata con Docker...")
+
+        # 1. Crea una directory di output temporanea sull'host
+        host_output_dir = Path(tempfile.mkdtemp(prefix=f"docker_build_{self.name}_"))
+
+        # 2. Prepara i volumi
+        method_vendor_dir = Path(template_vars["method_vendor_dir"])
+        volume_maps = (
+            f'-v "{method_vendor_dir.resolve()}":/src:ro '
+            f'-v "{host_output_dir.resolve()}":/output'
+        )
+
+        # 3. Prepara i comandi di setup (es. installare torch)
+        setup_cmds = " && ".join(builder_config.get("setup_commands", []))
+        if setup_cmds:
+            setup_cmds = f"{setup_cmds} && "
+
+        # 4. (MODIFICA) Prepara i comandi di build
+        build_cmds = []
+        build_dir_counter = 0
+        for pkg_template in builder_config.get("build_pip_packages", []):
+            
+            # --- INIZIO LOGICA CONDIZIONALE ---
+            if pkg_template.startswith("git+"):
+                # CASO 1: È un URL Git.
+                # Pip lo clonerà in una sua area /tmp scrivibile,
+                # quindi non abbiamo problemi di read-only.
+                self.logger.info(f"Docker Builder: Trovato URL Git: {pkg_template}")
+                build_cmds.append(
+                    f"pip wheel '{pkg_template}' -w /output --no-deps"
+                )
+            
+            else:
+                # CASO 2: È un percorso locale (es. {{method_vendor_dir}}).
+                # Dobbiamo usare la logica di copia per evitare l'errore read-only.
+                self.logger.info(f"Docker Builder: Trovato percorso locale: {pkg_template}")
+                pkg_path_host = self._render_template(pkg_template, template_vars)
+                src_path_in_container = pkg_path_host.replace(
+                    str(method_vendor_dir), "/src"
+                )
+
+                # Definisci una directory di build temporanea e scrivibile DENTRO il container
+                tmp_build_dir = f"/tmp/build_src_{build_dir_counter}"
+
+                # 1. Copia i sorgenti read-only in un'area scrivibile
+                build_cmds.append(f"cp -R '{src_path_in_container}' '{tmp_build_dir}'")
+                # 2. Esegui pip wheel sulla *copia* scrivibile
+                build_cmds.append(f"pip wheel '{tmp_build_dir}' -w /output --no-deps")
+
+                build_dir_counter += 1
+            # --- FINE LOGICA CONDIZIONALE ---
+
+        full_build_cmd = " && ".join(build_cmds)
+        if not full_build_cmd:
+            raise ValueError("docker_builder non ha 'build_pip_packages' da compilare.")
+
+        # 5. Prepara la correzione dei permessi
+        host_user_id = os.getuid()
+        host_group_id = os.getgid()
+        chown_cmd = f"chown -R {host_user_id}:{host_group_id} /output"
+
+        # 6. Costruisci il comando 'docker run' finale
+        image = builder_config["image"]
+        docker_command = (
+            f"docker run --rm --gpus all {volume_maps} "
+            f'{image} /bin/bash -c "set -e && {setup_cmds}{full_build_cmd} && {chown_cmd}"'
+        )
+
+        try:
+            # Esegui il comando di build
+            self.logger.info(f"Esecuzione build Docker: {docker_command}")
+            run_command(docker_command, self.logger.name, verbose=verbose, shell=True)
+            self.logger.info(
+                f"Build Docker completata. Wheel salvati in {host_output_dir}"
+            )
+            return host_output_dir
+        except Exception as e:
+            self.logger.error(f"Build Docker fallita: {e}")
+            shutil.rmtree(host_output_dir)  # Pulisci
+            raise
+    # --- FINE MODIFICA ---
+
+    def _run_isolated_pip_install(
+        self, env_path: Path, pkg_full_string: str, verbose: bool
+    ):
+        """
+        Esegue un comando 'pip install' usando l'eseguibile python
+        dell'ambiente e azzerando PYTHONPATH per un isolamento completo.
+        """
+        self.logger.info(f"Installazione pip isolata: {pkg_full_string}")
+        python_executable = env_path / "bin" / "python"
+
+        if not python_executable.exists():
+            self.logger.error(f"Eseguibile Python non trovato in: {python_executable}")
+            raise FileNotFoundError(f"Python non trovato in {python_executable}")
+
+        # Prepara le variabili d'ambiente per l'isolamento
+        env_vars = os.environ.copy()
+        env_vars["PATH"] = f"{env_path / 'bin'}{os.pathsep}{env_vars.get('PATH', '')}"
+        env_vars["PYTHONPATH"] = ""  # Isolamento CHIAVE
+
+        # Logica di parsing robusta per flag e pacchetti
+        parts = shlex.split(pkg_full_string)
+        packages_to_install = []
+        pip_flags = []
+
+        i = 0
+        while i < len(parts):
+            part = parts[i]
+            if part.startswith("--"):
+                pip_flags.append(part)
+                # Gestisce flag con argomento (es. --index-url <url>)
+                if i + 1 < len(parts) and not parts[i + 1].startswith("-"):
+                    pip_flags.append(parts[i + 1])
+                    i += 1  # Salta l'argomento
+            else:
+                packages_to_install.append(part)
+            i += 1
+
+        # Costruisce il comando
+        cmd_list = [
+            str(python_executable),
+            "-s",  # Non aggiungere il site-packages dell'utente
+            "-u",  # Unbuffered output
+            "-m",
+            "pip",
+            "install",
+            "-v",
+        ]
+        cmd_list.extend(packages_to_install)
+        cmd_list.extend(pip_flags)
+
+        # Riassembla come stringa per shell=True
+        # Aggiungiamo --no-deps per i wheel locali per forzare l'uso
+        # delle dipendenze già installate (torch).
+        if any(pkg.endswith(".whl") for pkg in packages_to_install):
+            cmd_list.append("--no-deps")
+            self.logger.info("Aggiunto flag --no-deps per l'installazione del wheel.")
+
+        cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd_list)
+
+        run_command(cmd, self.logger.name, verbose, shell=True, env=env_vars)
+
     def install(self, verbose=False):
         self.logger.info(f"Inizio installazione di '{self.name}'...")
         env_path = self._get_env_path()
         method_vendor_dir = self.pipe_root / "vendor" / self.name
+        built_wheels_dir = None  # Per la pulizia finale
 
-        # Controlla se l'ambiente esiste già. Se sì, consideriamo il metodo installato.
+        # Controlla se l'ambiente esiste già.
         if env_path and env_path.exists():
             self.logger.info(
                 f"Ambiente Conda '{env_path.name}' esiste già. Considero il metodo installato."
@@ -84,249 +237,85 @@ class MethodInstaller:
                     recursive_flag = (
                         "--recursive" if repo.get("recursive", False) else ""
                     )
-                    cmd = f"git clone --branch {repo['branch']} {recursive_flag} {repo['url']} {path}"
+                    branch_flag = (
+                        f"--branch {repo['branch']}" if repo.get("branch") else ""
+                    )
+                    cmd = (
+                        f"git clone {branch_flag} {recursive_flag} {repo['url']} {path}"
+                    )
                     run_command(cmd, self.logger.name, verbose, shell=True)
 
             if env_path:
-                # --- CASO 1: AMBIENTE DEDICATO ---
-                #TODO: da cancellare caso di environment.yml
-                env_file_template = self.install_config.get("conda_env_file")
+                # --- CASO 1: AMBIENTE DEDICATO (.envs/...) ---
 
-                if env_file_template:
-                    # Sottocaso A: Installazione da file environment.yml in 2 FASI
-                    env_file_path_str = self._render_template(
-                        env_file_template, template_vars
-                    )
-                    env_file_path = Path(env_file_path_str)
-
-                    if not env_file_path.is_file():
-                        raise FileNotFoundError(
-                            f"Il file di ambiente specificato non è stato trovato: {env_file_path}"
-                        )
-
-                    self.logger.info(f"Lettura del file di ambiente: {env_file_path}")
-                    with open(env_file_path, "r") as f:
-                        env_data = yaml.safe_load(f)
-
-                    # Separa dipendenze Conda e Pip
-                    conda_deps = []
-                    pip_deps = []
-                    channels = env_data.get("channels", [])
-                    for dep in env_data.get("dependencies", []):
-                        if isinstance(dep, dict) and "pip" in dep:
-                            pip_deps.extend(dep["pip"])
-                        else:
-                            conda_deps.append(dep)
-
-                    # --- INIZIO MODIFICA: Logica di installazione compilatore ---
-                    if platform.system() == "Linux":
-                        self.logger.info(
-                            "Aggiunta dei compilatori nativi (c-compiler, cxx-compiler) e cudatoolkit-dev."
-                        )
-
-                        cuda_version_str = self.install_config.get(
-                            "CUDA_VERSION", "11.8"
-                        )
-
-                        # Mappa delle versioni CUDA -> GCC
-                        CUDA_TO_COMPILER_VERSION = {
-                            "11.6": "9.*",  # Per PyTorch 1.12/1.13
-                            "11.7": "11.*",
-                            "11.8": "11.*",  # Per PyTorch 2.x
-                            "12.0": "12.*",
-                        }
-
-                        compiler_version = CUDA_TO_COMPILER_VERSION.get(
-                            str(cuda_version_str)
-                        )
-
-                        if compiler_version:
-                            self.logger.info(
-                                f"Blocco compilatori alla versione {compiler_version} per CUDA {cuda_version_str}."
-                            )
-                            # Usa i meta-pacchetti 'c-compiler' e 'cxx-compiler' di conda-forge
-                            conda_deps.append(f"c-compiler *_{compiler_version}")
-                            conda_deps.append(f"cxx-compiler *_{compiler_version}")
-                        else:
-                            self.logger.warning(
-                                f"Nessuna versione GCC mappata per CUDA_VERSION='{cuda_version_str}'. Uso meta-pacchetti generici."
-                            )
-                            conda_deps.append("c-compiler")
-                            conda_deps.append("cxx-compiler")
-
-                        conda_deps.append(f"cudatoolkit-dev={cuda_version_str}")
-
-                        if "libxcrypt" not in conda_deps:
-                            conda_deps.append("libxcrypt")
-
-                        if "conda-forge" not in channels:
-                            channels.insert(0, "conda-forge")
-                    # --- FINE MODIFICA ---
-
-                    # FASE 1: Crea ambiente e installa TUTTI i pacchetti CONDA
+                # 1.A Creazione Ambiente Conda
+                self.logger.info(f"Creazione ambiente Conda da .toml: {env_path.name}")
+                channels = " ".join(
+                    [f"-c {c}" for c in self.install_config.get("conda_channels", [])]
+                )
+                packages_list = self.install_config.get("conda_packages", [])
+                if platform.system() == "Linux":
                     self.logger.info(
-                        f"FASE 1: Creazione ambiente e installazione pacchetti Conda: {conda_deps}"
+                        "Aggiunta dei compilatori nativi (c-compiler, cxx-compiler)."
                     )
-                    channels_str = " ".join([f"-c {c}" for c in channels])
-                    deps_str = " ".join(f'"{d}"' for d in conda_deps)
-                    cmd = (
-                        f"conda create --prefix {env_path} {channels_str} {deps_str} -y"
-                    )
+                    packages_list.extend(["c-compiler", "cxx-compiler"])
+                    if "conda-forge" not in channels:
+                        channels = f"-c conda-forge {channels}"
+
+                packages = " ".join(f'"{p}"' for p in packages_list)
+
+                if packages:
+                    cmd = f"conda create --prefix {env_path} {channels} {packages} -y"
                     run_command(cmd, self.logger.name, verbose, shell=True)
 
-                    # FASE 2: Installa pacchetti PIP nell'ambiente appena creato
-                    if pip_deps:
-                        self.logger.info(
-                            f"FASE 2: Installazione pacchetti Pip: {pip_deps}"
-                        )
-                        cwd = env_file_path.parent
+                # 1.B Esecuzione Docker Builder (se richiesto)
+                # Questo produce solo i file .whl, non li installa
+                docker_builder_config = self.install_config.get("docker_builder")
 
-                        # --- INIZIO MODIFICA: Isolamento ambiente per pip ---
-                        env_vars = os.environ.copy()
-                        env_bin_path = env_path / "bin"
-                        env_lib_path = env_path / "lib"
-                        env_include_path = env_path / "include"
-
-                        original_path = env_vars.get("PATH", "")
-                        env_vars["PATH"] = f"{env_bin_path}{os.pathsep}{original_path}"
-
-                        env_vars["CUDA_HOME"] = str(env_path)
-                        env_vars["TORCH_CUDA_ARCH_LIST"] = "7.5 8.6 8.9"
-
-                        original_include = env_vars.get("CPLUS_INCLUDE_PATH", "")
-                        env_vars["CPLUS_INCLUDE_PATH"] = (
-                            f"{env_include_path}{os.pathsep}{original_include}"
-                        )
-
-                        original_lib = env_vars.get("LIBRARY_PATH", "")
-                        env_vars["LIBRARY_PATH"] = (
-                            f"{env_lib_path}{os.pathsep}{original_lib}"
-                        )
-
-                        original_ld_lib = env_vars.get("LD_LIBRARY_PATH", "")
-                        env_vars["LD_LIBRARY_PATH"] = (
-                            f"{env_lib_path}{os.pathsep}{original_ld_lib}"
-                        )
-
-                        # --- MODIFICA CHIAVE 1: Azzeramento PYTHONPATH ---
-                        env_vars["PYTHONPATH"] = ""
-
-                        self.logger.debug(
-                            f"Variabile CUDA_HOME forzata a: {env_vars['CUDA_HOME']}"
-                        )
-                        self.logger.debug(
-                            f"Variabile CPLUS_INCLUDE_PATH forzata a: {env_vars.get('CPLUS_INCLUDE_PATH')}"
-                        )
-                        self.logger.debug(
-                            f"Variabile LIBRARY_PATH forzata a: {env_vars.get('LIBRARY_PATH')}"
-                        )
-                        self.logger.debug(f"Variabile PYTHONPATH azzerata.")
-                        self.logger.debug(f"Nuova variabile PATH: {env_vars['PATH']}")
-                        # --- FINE MODIFICA ---
-
-                        for pkg in pip_deps:
-                            pkg_path = self._render_template(pkg, template_vars)
-                            self.logger.info(f"Installazione pip: {pkg_path}")
-
-                            python_executable = env_path / "bin" / "python"
-
-                            # --- MODIFICA CHIAVE 2: Aggiunta flag -s ---
-                            # -s = Non aggiungere il site-packages dell'utente a sys.path
-                            cmd = f'"{python_executable}" -s -u -m pip install -v "{pkg_path}"'
-
-                            run_command(
-                                cmd,
-                                self.logger.name,
-                                verbose,
-                                shell=True,
-                                cwd=cwd,
-                                env=env_vars,
-                            )
-                else:
-                    # Sottocaso B: Installazione da liste nel .toml (per metodi semplici)
-                    self.logger.info(
-                        f"Creazione ambiente Conda da .toml: {env_path.name}"
-                    )
-                    channels = " ".join(
-                        [
-                            f"-c {c}"
-                            for c in self.install_config.get("conda_channels", [])
-                        ]
+                if docker_builder_config and docker_builder_config.get("enabled"):
+                    self.logger.info("Avvio fase di build Docker...")
+                    built_wheels_dir = self._run_docker_build(
+                        docker_builder_config, template_vars, verbose
                     )
 
-                    packages_list = self.install_config.get("conda_packages", [])
-                    if platform.system() == "Linux":
-                        self.logger.info(
-                            "Aggiunta dei compilatori nativi (c-compiler, cxx-compiler)."
-                        )
-                        packages_list.extend(["c-compiler", "cxx-compiler"])
-                        if "conda-forge" not in channels:
-                            channels = f"-c conda-forge {channels}"
-                    packages = " ".join(f'"{p}"' for p in packages_list)
-
-                    if packages:
-                        cmd = (
-                            f"conda create --prefix {env_path} {channels} {packages} -y"
-                        )
-                        run_command(cmd, self.logger.name, verbose, shell=True)
-
+                # 1.C Installazione Pacchetti Pip (Dipendenze come torch)
+                self.logger.info("Installazione dipendenze pip (es. torch)...")
                 for pkg_template in self.install_config.get("pip_packages", []):
                     pkg_full_string = self._render_template(pkg_template, template_vars)
-                    self.logger.info(f"Installazione pacchetto Pip: {pkg_full_string}")
+                    self._run_isolated_pip_install(env_path, pkg_full_string, verbose)
 
-                    # --- INIZIO MODIFICA: Parsing dei flag pip ---
-                    import shlex
-                    parts = shlex.split(pkg_full_string)
+                # 1.D Installazione Wheel compilati (se presenti)
+                # Ora che torch è installato, possiamo installare i wheel
+                if built_wheels_dir:
+                    self.logger.info("Installazione wheel compilati da Docker...")
+                    for wheel_file in built_wheels_dir.glob("*.whl"):
+                        self._run_isolated_pip_install(
+                            env_path, str(wheel_file.resolve()), verbose
+                        )
+                        
+                #COMANDI POST-INSTALL
+                post_install_cmds = self.install_config.get("post_install_commands", [])
+                if post_install_cmds:
+                    self.logger.info("FASE 3: Esecuzione comandi post-installazione...")
                     
-                    packages_to_install = []
-                    pip_flags = []
-
-                    for part in parts:
-                        if part.startswith('--'):
-                            # Se la parte è un flag (es. --index-url), la aggiungiamo ai flag
-                            # e assumiamo che la parte successiva sia il suo valore
-                            pip_flags.append(part)
-                        elif pip_flags and pip_flags[-1].startswith('--'):
-                            # Se l'elemento precedente era un flag, questo è il suo valore
-                            pip_flags.append(part)
-                        else:
-                            # Altrimenti, è un nome di pacchetto
-                            packages_to_install.append(part)
-                    
-                    python_executable = env_path / "bin" / "python"
-                    
-                    # Ricostruisci il comando correttamente
-                    cmd_list = [
-                        str(python_executable),
-                        "-s","-u", "-m", "pip", "install", "-v"
-                    ]
-                    cmd_list.extend(packages_to_install)
-                    cmd_list.extend(pip_flags)
-                    
-                    # Converti la lista in una stringa per run_command con shell=True
-                    cmd = " ".join(f'"{part}"' if " " in part else part for part in cmd_list)
-                    # --- FINE MODIFICA ---
-
-                    env_vars = os.environ.copy()
-                    env_vars["PATH"] = (
-                        f"{env_path / 'bin'}{os.pathsep}{env_vars.get('PATH', '')}"
-                    )                        
-                    # env_vars["CUDA_HOME"] = str(env_path)
-                    # env_vars["LD_LIBRARY_PATH"] = (
-                    #     f"{env_path / 'lib'}{os.pathsep}{env_vars.get('LD_LIBRARY_PATH', '')}"
-                    # )
-                    # --- MODIFICA CHIAVE 1: Azzeramento PYTHONPATH ---
-                    env_vars["PYTHONPATH"] = ""
-
-                    run_command(
-                        cmd, self.logger.name, verbose, shell=True, env=env_vars
-                    )
+                    for cmd_template in post_install_cmds:
+                        if not cmd_template: continue
+                        rendered_cmd = self._render_template(cmd_template, template_vars)
+                        self.logger.info(f"Esecuzione comando: {rendered_cmd}")
+                        
+                        final_cmd = f'conda run --prefix {str(env_path)} --no-capture-output bash -c "{rendered_cmd}"'
+                        
+                        run_command(final_cmd, self.logger.name, verbose, shell=True)
 
             else:
                 # --- CASO 2: AMBIENTE ATTIVO (BASE) ---
-                self.logger.info(
-                    f"Installazione di '{self.name}' nell'ambiente Conda attivo..."
+                self.logger.warning(
+                    f"Nessun 'conda_env_name' specificato. Installazione di '{self.name}' nell'ambiente Conda attivo..."
                 )
+                self.logger.warning(
+                    "La build Docker isolata non è supportata in questa modalità."
+                )
+
                 conda_packages = self.install_config.get("conda_packages", [])
                 if conda_packages:
                     self.logger.info(f"Installazione pacchetti Conda: {conda_packages}")
@@ -338,17 +327,14 @@ class MethodInstaller:
                 for pkg_template in pip_packages:
                     pkg = self._render_template(pkg_template, {})
                     self.logger.info(f"Installazione pacchetto Pip: {pkg}")
-                    # --- MODIFICA CHIAVE 2: Aggiunta --ignore-installed ---
-                    # Anche qui, -s per sicurezza
                     cmd = f'python -s -u -m pip install "{pkg}"'
                     run_command(cmd, self.logger.name, verbose, shell=True)
 
-            # Esegui comandi di build finali, se presenti
+            # 4. Esegui comandi di build finali
             for cmd_template in self.install_config.get("build_commands", []):
                 cmd = self._render_template(cmd_template, template_vars)
                 self.logger.info(f"Esecuzione comando di build: {cmd}")
                 if env_path:
-                    # 'conda run' è ok qui perché le estensioni sono già compilate.
                     run_cmd = f"conda run --prefix {env_path} {cmd}"
                     run_command(
                         run_cmd,
@@ -368,3 +354,14 @@ class MethodInstaller:
             self.logger.error(f"Errore durante l'installazione di '{self.name}': {e}")
             self._cleanup()
             raise
+
+        finally:
+            # Pulizia finale dei wheel temporanei
+            if built_wheels_dir:
+                self.logger.debug(f"Pulizia directory build Docker: {built_wheels_dir}")
+                try:
+                    shutil.rmtree(built_wheels_dir)
+                except Exception as e:
+                    self.logger.warning(
+                        f"Impossibile pulire la directory tmp {built_wheels_dir}: {e}"
+                    )

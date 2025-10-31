@@ -9,6 +9,11 @@ conda_env_name = "splat_graphdeco_v2" # Nuovo nome per evitare conflitti cache
 # dal repo originale.
 CUDA_VERSION = "11.8" 
 
+#Git Repo (invariato)
+git_repos = [
+    { url = "https://github.com/graphdeco-inria/gaussian-splatting.git", branch = "main", path = "gaussian-splatting", recursive = true }
+]
+
 # 1. Canali Conda
 # 'conda-forge' deve essere prima per i compilatori
 conda_channels = [
@@ -19,51 +24,48 @@ conda_channels = [
 ]
 
 # 2. Pacchetti Conda
-# Sostituiamo il vecchio environment.yml con pacchetti moderni
 conda_packages = [
     "python=3.10", # Stabile e compatibile
     "pip",
-    
-    # PyTorch 2.1.2 è compatibile con CUDA 11.8
-    # Usiamo 'pytorch-cuda' per assicurarci di prendere la build giusta
-    # "pytorch=2.1.2",
-    # "pytorch-cuda=11.8",
-    # "torchvision",
-    # "torchaudio",
-    
-    # Il toolkit (per le librerie) e il dev-toolkit (per nvcc)
-    # "cudatoolkit=11.8",
-    # "cudatoolkit-dev=11.8",
     "cuda-toolkit=11.8",  # Meta-pacchetto che installa sia cudatoolkit che cudatoolkit-dev
     "nvidia/label/cuda-11.8.0::cuda-nvcc",
-    
-    # QUI LA SOLUZIONE:
-    # Questi meta-pacchetti installano i compilatori C/C++ *nativi*
-    # che useranno i percorsi di libreria corretti del tuo WSL
-    # (risolvendo l'errore /lib64/libm.so.6)
     "c-compiler",
     "cxx-compiler",
-    
-    # Dipendenze del repo originale
     "tqdm",
     "plyfile"
 ]
 
 # 3. Pacchetti Pip
-# Questi sono i sottomoduli che richiedono la compilazione
-# Verranno compilati usando i compilatori (c-compiler) e nvcc (cudatoolkit-dev)
 pip_packages = [
     "torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu118", # Installiamo PyTorch con CUDA 11.8
-    "{{method_vendor_dir}}/gaussian-splatting/submodules/diff-gaussian-rasterization",
-    "{{method_vendor_dir}}/gaussian-splatting/submodules/simple-knn",
     "opencv-python", # Dipendenza di base
     "joblib"         # Dipendenza di base
 ]
 
-# 4. Git Repo (invariato)
-git_repos = [
-    { url = "https://github.com/graphdeco-inria/gaussian-splatting.git", branch = "main", path = "gaussian-splatting", recursive = true }
+
+# 3. Configurazione del Docker Builder
+[installation.docker_builder]
+enabled = true
+
+# Immagine Docker da usare per la build.
+# DEVE corrispondere all'ambiente host (Ubuntu 22.04 + CUDA 11.8)
+# per garantire la compatibilità dei binari (glibc, ecc.).
+image = "nvidia/cuda:11.8.0-devel-ubuntu22.04"
+
+# Comandi da eseguire nel container *prima* di compilare i wheel.
+# Usato per installare dipendenze di build come PyTorch.
+setup_commands = [
+    "apt-get update && apt-get install -y python3.10 python3-pip ninja-build",
+    "pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu118"
 ]
+# Pacchetti da compilare in modo isolato.
+# L'installer li compilerà in .whl e li installerà per primo.
+# I percorsi usano la variabile Jinja2 che punta al 'vendor/'.
+build_pip_packages = [
+    "{{method_vendor_dir}}/gaussian-splatting/submodules/diff-gaussian-rasterization",
+    "{{method_vendor_dir}}/gaussian-splatting/submodules/simple-knn"
+]
+
 
 
 [execution]
@@ -84,4 +86,5 @@ primary_output = "splat_ply"
 
 [validation]
 # Aggiorniamo il comando di validazione per testare l'import
-validation_command = "conda run --prefix {{env_path}} python -c 'import torch; import diff_gaussian_rasterization; print(\"Splat Graphdeco (Modern) Env OK\")'"
+# validation_command = "conda run --prefix {{env_path}} python -c 'import torch; import diff_gaussian_rasterization; print(\"Splat Graphdeco (Modern) Env OK\")'"
+validation_command = "python -c 'import torch; import diff_gaussian_rasterization; print(\"Splat Graphdeco (Modern) Env OK\")'"
