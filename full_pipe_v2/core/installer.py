@@ -306,6 +306,8 @@ class MethodInstaller:
                         final_cmd = f'conda run --prefix {str(env_path)} --no-capture-output bash -c "{rendered_cmd}"'
                         
                         run_command(final_cmd, self.logger.name, verbose, shell=True)
+                else:
+                    self.logger.info("Nessun comando post-installazione da eseguire.")
 
             else:
                 # --- CASO 2: AMBIENTE ATTIVO (BASE) ---

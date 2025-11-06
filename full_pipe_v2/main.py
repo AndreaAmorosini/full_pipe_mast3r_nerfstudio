@@ -152,14 +152,21 @@ def list_methods():
 
 @methods_app.command("validate")
 def validate_methods(
-    verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Mostra output dettagliato.")
-    ] = False,
+    method_name: str = typer.Argument(
+        None,
+        help="Il nome del singolo metodo da validare. Se non specificato, valida tutti i metodi installati.",
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Mostra output dettagliato dei comandi."
+    ),
 ):
-    """Valida l'installazione di tutti i metodi registrati."""
+    """Valida l'installazione di uno o tutti i metodi registrati."""
     setup_logging(level=logging.DEBUG if verbose else logging.INFO)
     validator = Validator(METHODS_DIR)
-    success = validator.validate_all(verbose=verbose)
+    if method_name:
+        success = validator.validate_single(method_name, verbose=verbose)
+    else:
+        success = validator.validate_installed(verbose=verbose)
 
     if success:
         typer.secho("Tutti i metodi sono validi!", fg=typer.colors.GREEN)

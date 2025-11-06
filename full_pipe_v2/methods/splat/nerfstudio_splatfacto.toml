@@ -19,6 +19,12 @@ pip_packages = [
     "ninja",
 ]
 
+post_install_commands = [
+    "pip install nerfstudio",
+    "ns-install-cli",
+]
+
+
 # Questa sezione compila i pacchetti C++/CUDA in .whl isolati.
 [installation.docker_builder]
 enabled = true
@@ -40,10 +46,6 @@ build_pip_packages = [
     "git+https://github.com/nerfstudio-project/gsplat.git"
 ]
 
-post_install_commands = [
-    "pip install nerfstudio",
-    "ns-install-cli",
-]
 
 [execution]
 # Questo comando usa Jinja2 per cambiare modalità
@@ -85,4 +87,4 @@ final_ply = "{{step_output_dir}}/splat/splat.ply" # Prodotto da 'train_export'
 # 'primary_output' dipende dalla modalità, lo gestiamo nella pipeline.toml
 
 [validation]
-validation_command = "conda run --prefix {{env_path}} python -c 'import nerfstudio; import tinycudann; import gsplat; print(\"Nerfstudio Env OK\")'"
+validation_command = "python -c 'import nerfstudio; import tinycudann; import gsplat; print(\"Nerfstudio Env OK\")'"
