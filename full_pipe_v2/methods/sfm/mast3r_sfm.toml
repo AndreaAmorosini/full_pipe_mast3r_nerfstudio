@@ -30,14 +30,16 @@ git_repos = [
 
 # Installiamo le dipendenze Python dai file requirements.txt del repository.
 pip_packages = [
+    "numpy<2.0.0",
+    "faiss-gpu",
     "-r {{method_vendor_dir}}/mast3r/requirements.txt",
     "-r {{method_vendor_dir}}/mast3r/dust3r/requirements.txt",
     "pyaml",
-    "faiss-gpu"
 ]
 
 # Comandi per compilare le estensioni C++/Cython necessarie (come asmk).
 build_commands = [
+    "git clone https://github.com/jenicek/asmk {{method_vendor_dir}}/mast3r/asmk",
     "python -m cython {{method_vendor_dir}}/mast3r/asmk/cython/*.pyx",
     "pip install {{method_vendor_dir}}/mast3r/asmk"
 ]

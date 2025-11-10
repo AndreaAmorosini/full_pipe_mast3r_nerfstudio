@@ -182,7 +182,7 @@ class MethodInstaller:
                     pip_flags.append(parts[i + 1])
                     i += 1  # Salta l'argomento
             else:
-                packages_to_install.append(part)
+                packages_to_install.append(shlex.quote(part))
             i += 1
 
         # Costruisce il comando
