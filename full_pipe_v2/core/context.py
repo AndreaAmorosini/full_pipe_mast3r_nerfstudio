@@ -11,9 +11,9 @@ class PipelineContext:
     def __init__(self, initial_config: dict):
         self.data = initial_config
         self.output_dir = Path(self.data.get("output_dir", "outputs/default_run"))
+        self.logger = logging.getLogger("PipelineContext")
         self.step_dirs = {}
         self._setup_dirs()
-        self.logger = logging.getLogger("PipelineContext")
 
     def _setup_dirs(self):
         """Crea la directory di output principale."""
@@ -34,6 +34,16 @@ class PipelineContext:
     def get_output_dir(self) -> Path:
         """Ritorna la directory di output radice."""
         return self.output_dir
+    
+    def get_required(self, key: str):
+        """
+        Recupera un valore dal contesto.
+        Solleva un'eccezione KeyError se la chiave non è presente.
+        """
+        if key not in self.data:
+            self.logger.error(f"La chiave richiesta '{key}' non è stata trovata nel contesto.")
+            raise KeyError(f"La chiave richiesta '{key}' non è stata trovata nel contesto. Contesto attuale: {self.data}")
+        return self.data[key]
 
     def get_step_output_dir(self, step_name: str) -> Path:
         """

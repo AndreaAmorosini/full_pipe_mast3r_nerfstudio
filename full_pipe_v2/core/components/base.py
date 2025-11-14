@@ -26,11 +26,23 @@ class CommandRunnerStep:
         try:
             template_vars = self._prepare_template_vars()
             command_template = self.method_config["execution"]["command"]
-            command_to_run = self._render_template(command_template, template_vars)
+            rendered_command = self._render_template(command_template, template_vars)
+
+            # --- MODIFICA: Aggiungi il wrapper conda run se necessario ---
+            final_command_to_run = rendered_command
+            env_path = template_vars.get("env_path")
+            
+            if env_path:
+                self.logger.info(f"Esecuzione all'interno dell'ambiente Conda: {env_path}")
+                # Usiamo bash -c per gestire correttamente comandi multi-riga e quoting
+                # Sostituiamo i doppi apici nel comando con singoli per evitare conflitti
+                escaped_command = rendered_command.replace('"', "'")
+                final_command_to_run = f'conda run --prefix "{env_path}" bash -c "{escaped_command}"'
+            # --- FINE MODIFICA ---
 
             self.logger.info(f"Avvio esecuzione per {self.name}...")
             run_command(
-                command_to_run,
+                final_command_to_run, # Usa il comando finale, non quello originale
                 log_name=self.logger.name,
                 verbose=self.verbose,
                 shell=True,
@@ -63,7 +75,7 @@ class CommandRunnerStep:
         env_name = self.method_config.get("installation", {}).get("conda_env_name")
         if env_name:
             env_path = (
-                self.project_root / "full_pipe_v2" / ".envs" / env_name
+                self.project_root / ".envs" / env_name
             ).resolve()
             vars["env_path"] = str(env_path)
 

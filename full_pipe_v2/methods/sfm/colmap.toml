@@ -32,7 +32,7 @@ colmap mapper \
 
 [execution.inputs]
 # Richiede la directory di immagini prodotta dallo step precedente.
-image_dir = "string"
+input_file = "string"
 
 [execution.outputs]
 # L'output è la directory contenente il modello sparso (cameras.bin, images.bin, points3D.bin).
