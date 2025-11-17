@@ -71,7 +71,7 @@ build_pip_packages = [
 [execution]
 # Il comando di esecuzione rimane invariato.
 command = """
-conda run --prefix {{env_path}} python {{method_vendor_dir}}/gaussian-splatting/train.py \
+python {{method_vendor_dir}}/gaussian-splatting/train.py \
     -s "{{ inputs.colmap_model_dir }}" \
     -m "{{ step_output_dir }}/model" \
     --iterations "{{ config.iterations | default(30000) }}"

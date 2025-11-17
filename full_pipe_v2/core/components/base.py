@@ -28,7 +28,6 @@ class CommandRunnerStep:
             command_template = self.method_config["execution"]["command"]
             rendered_command = self._render_template(command_template, template_vars)
 
-            # --- MODIFICA: Aggiungi il wrapper conda run se necessario ---
             final_command_to_run = rendered_command
             env_path = template_vars.get("env_path")
             
@@ -37,8 +36,7 @@ class CommandRunnerStep:
                 # Usiamo bash -c per gestire correttamente comandi multi-riga e quoting
                 # Sostituiamo i doppi apici nel comando con singoli per evitare conflitti
                 escaped_command = rendered_command.replace('"', "'")
-                final_command_to_run = f'conda run --prefix "{env_path}" bash -c "{escaped_command}"'
-            # --- FINE MODIFICA ---
+                final_command_to_run = f'conda run --prefix "{env_path}" --no-capture-output bash -c "{escaped_command}"'
 
             self.logger.info(f"Avvio esecuzione per {self.name}...")
             run_command(
@@ -60,7 +58,9 @@ class CommandRunnerStep:
     def _prepare_template_vars(self) -> dict:
         """Raccoglie tutte le variabili per Jinja2."""
         
-        method_vendor_dir = (self.project_root / "full_pipe_v2" / "vendor" / self.name).resolve()
+        # method_vendor_dir = (self.project_root / "full_pipe_v2" / "vendor" / self.name).resolve()
+        method_vendor_dir = (self.project_root / "vendor" / self.name).resolve()
+
 
         vars = {
             "context": self.context.data,
@@ -84,10 +84,13 @@ class CommandRunnerStep:
 
         # Risolvi gli input
         inputs = {}
-        if "inputs" in self.method_config["execution"]:
-            for key in self.method_config["execution"]["inputs"]:
-                input_value = self.context.get_required(key)
-                inputs[key] = input_value
+        if "inputs" in self.step_config:
+            for key, template_str in self.step_config["inputs"].items():
+                # input_value = self.context.get_required(key)
+                rendered_value = self._render_template(template_str, vars)
+                if isinstance(rendered_value, str):
+                    rendered_value = str(Path(rendered_value).expanduser().resolve())
+                inputs[key] = rendered_value
         vars["inputs"] = inputs
 
         # Risolvi gli output
@@ -126,30 +129,75 @@ class CommandRunnerStep:
 
         return vars
     
+    # def _check_and_register_outputs(self, template_vars: dict):
+    #     """Verifica e salva l'output primario nel context."""
+    #     self.logger.info("Verifica degli output...")
+    #     primary_output_name = self.method_config["execution"].get("primary_output")
+    #     if not primary_output_name:
+    #         self.logger.debug("Nessun 'primary_output' definito. Step completato.")
+    #         return
+
+    #     output_key_in_context = self.method_config["execution"]["outputs"].get(primary_output_name)
+    #     if not output_key_in_context:
+    #         self.logger.warning(
+    #             f"'output_key' non specificato. L'output non sarà passato."
+    #         )
+    #         return
+
+    #     output_path_str = template_vars["outputs"].get(primary_output_name)
+    #     if not output_path_str:
+    #         raise ValueError(f"primary_output '{primary_output_name}' non trovato.")
+
+    #     output_path = Path(output_path_str)
+    #     if not output_path.exists():
+    #         raise FileNotFoundError(
+    #             f"Output primario atteso non trovato in {output_path}"
+    #         )
+
+    #     self.context.set(output_key_in_context, str(output_path))
+    #     self.logger.info(f"Output salvato in context['{output_key_in_context}']")
+
     def _check_and_register_outputs(self, template_vars: dict):
         """Verifica e salva l'output primario nel context."""
         self.logger.info("Verifica degli output...")
-        primary_output_name = self.method_config["execution"].get("primary_output")
-        if not primary_output_name:
-            self.logger.debug("Nessun 'primary_output' definito. Step completato.")
-            return
 
+        # 1. Prende la chiave con cui salvare l'output nel contesto (es. "colmap_model_dir").
+        #    Questa è definita nel file della pipeline -> self.step_config.
         output_key_in_context = self.step_config.get("output_key")
         if not output_key_in_context:
-            self.logger.warning(
-                f"'output_key' non specificato. L'output non sarà passato."
+            self.logger.debug(
+                "Nessun 'output_key' definito per questo step nella pipeline. Salto la registrazione."
             )
             return
 
+        # 2. Prende il nome dell'output primario definito nel metodo (es. "colmap_model_dir").
+        #    Questo è definito nel file del metodo -> self.method_config.
+        primary_output_name = self.method_config["execution"].get("primary_output")
+        if not primary_output_name:
+            self.logger.debug(
+                "Nessun 'primary_output' definito nel metodo. Salto la registrazione."
+            )
+            return
+
+        # 3. Recupera il percorso dell'output già renderizzato da _prepare_template_vars.
         output_path_str = template_vars["outputs"].get(primary_output_name)
         if not output_path_str:
-            raise ValueError(f"primary_output '{primary_output_name}' non trovato.")
+            self.logger.error(
+                f"La chiave 'primary_output' '{primary_output_name}' non ha un percorso corrispondente in [execution.outputs]."
+            )
+            raise ValueError(
+                f"Impossibile trovare il percorso per l'output primario '{primary_output_name}'."
+            )
 
+        # 4. Verifica che il file o la directory di output esista effettivamente.
         output_path = Path(output_path_str)
         if not output_path.exists():
             raise FileNotFoundError(
-                f"Output primario atteso non trovato in {output_path}"
+                f"Output primario atteso '{primary_output_name}' non trovato nel percorso: {output_path}"
             )
 
+        # 5. Salva il percorso nel contesto usando la chiave definita nella pipeline.
         self.context.set(output_key_in_context, str(output_path))
-        self.logger.info(f"Output salvato in context['{output_key_in_context}']")
+        self.logger.info(
+            f"Output salvato nel contesto: context['{output_key_in_context}'] = '{output_path}'"
+        )
