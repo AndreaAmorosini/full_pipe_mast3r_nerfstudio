@@ -9,9 +9,9 @@ from .components.base import CommandRunnerStep
 class PipelineRunner:
     """Orchestra l'esecuzione della pipeline."""
 
-    def __init__(self, config_path: Path, methods_dir: Path):
+    def __init__(self, config_path: Path, methods_dir: Path, override_args: dict = None):
         self.config = toml.load(config_path)
-        self.context = PipelineContext(self.config.get("context", {}))
+        self.context = PipelineContext(self.config.get("context", {}), override_args=override_args)
         self.validator = Validator(methods_dir)
 
         pipeline_config = self.config.get("pipeline", {})

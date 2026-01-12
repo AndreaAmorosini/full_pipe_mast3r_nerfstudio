@@ -172,7 +172,7 @@ class CommandRunnerStep:
 
         # 2. Prende il nome dell'output primario definito nel metodo (es. "colmap_model_dir").
         #    Questo è definito nel file del metodo -> self.method_config.
-        primary_output_name = self.method_config["execution"].get("primary_output")
+        primary_output_name = self.step_config.get("primary_output") or self.method_config["execution"].get("primary_output")
         if not primary_output_name:
             self.logger.debug(
                 "Nessun 'primary_output' definito nel metodo. Salto la registrazione."

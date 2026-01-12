@@ -11,6 +11,8 @@ conda_packages = [
     "pip",
     "cuda-toolkit=11.8",  # Meta-pacchetto che installa sia cudatoolkit che cudatoolkit-dev
     "nvidia/label/cuda-11.8.0::cuda-nvcc",
+    "ffmpeg",
+    "colmap",
 ]
 
 # Installa Pytorch, tcnn, gsplat, nerfstudio, ecc.
@@ -51,28 +53,105 @@ build_pip_packages = [
 # Questo comando usa Jinja2 per cambiare modalità
 # in base a 'config.mode' passato dalla pipeline.toml
 command = """
-conda run --prefix {{env_path}} python scripts/nerfstudio_commands.py \
 {% if config.mode == 'frame_extraction' %}
-    --frame-extraction \
-    --data-path "{{inputs.video_path}}" \
+    ns-process-data video \
+    --data "{{inputs.video_path}}" \
     --output-dir "{{outputs.image_dir}}" \
-    --frame-count "{{config.frame_count | default(300)}}" \
-{% elif config.mode == 'train_export' %}
-    --data-path "{{inputs.image_dir}}" \
+    --num-frames-target {{config.frame_count | default(300)}} \
+    --gpu \
+    --skip-colmap \
+    --num-downscales 0
+
+{% elif config.mode == 'train_export' %}    
+    echo "Starting Data Processing..."
+    ns-process-data images \
+    --data "{{inputs.image_dir}}" \
     --output-dir "{{outputs.model_dir}}" \
-    --model "{{config.model | default('splatfacto')}}" \
-    --max-num-iterations "{{config.max_iterations | default(30000)}}" \
-    --num-downscales "{{config.num_downscales | default(8)}}" \
-    {% if config.use_mcmc %}--use-mcmc{% endif %} \
-    {% if config.advanced %}--advanced{% endif %} \
+    --gpu \
     {% if config.skip_colmap %}
         --skip-colmap \
-        --colmap-model-path "{{inputs.colmap_dir}}"
+        --colmap-model-path "{{inputs.colmap_dir}}" \
     {% endif %}
+    --verbose
+
+    echo "Starting Training..."
+    ns-train {{config.model | default('splatfacto')}} \
+    --data "{{outputs.model_dir}}" \
+    --output-dir "{{outputs.model_dir}}/export" \
+    --viewer.quit-on-train-completion True \
+    --pipeline.datamanager.cache-images cpu \
+    --max-num-iterations {{config.max_iterations | default(30000)}} \
+    --downscale-factor {{config.num_downscales | default(8)}} \
+    --center-method none \
+    {% if config.dataparser_scale %}
+        --pipeline.datamanager.dataparser.scale_factor {{config.dataparser_scale}} \
+    {% endif %}
+    {% if config.advanced %}
+        --pipeline.model.cull-alpha-thresh 0.005 \
+        --pipeline.model.use-scale-regularization True \
+        --pipeline.model.use-bilateral-grid True \
+        --pipeline.datamanager.train-cameras-sampling-strategy fps \
+        --pipeline.model.camera-optimizer.mode SO3xR3 \
+        --pipeline.model.cull-scale-thresh 0.5 \
+        --pipeline.model.densify-grad-thresh 0.0008 \
+        --pipeline.model.densify-size-thresh 0.01 \
+        {% if config.model != 'splatfacto-w-light' %}
+            --pipeline.model.sh-degree 3 \
+        {% endif %}
+    {% endif %}
+    {% if config.use_mcmc and (config.model == 'splatfacto' or config.model == 'splatfacto-big') %}
+        --pipeline.model.strategy mcmc \
+        --pipeline.model.noise-lr 500000.0 \
+        --pipeline.model.mcmc-opacity-reg 0.01 \
+        --pipeline.model.mcmc-scale-reg 0.01 \
+    {% endif %}
+    nerfstudio-data
+
+    echo "Searching for config..."
+    CONFIG_FILE=$(find "{{outputs.model_dir}}/export" -name "config.yml" | sort | tail -n 1)
+
+    if [ -z "$CONFIG_FILE" ]; then 
+        echo "Error: config.yml not found in {{outputs.model_dir}}/export"
+        exit 1
+    fi
+    
+    echo "Exporting using config: $CONFIG_FILE"
+    
+    ns-export gaussian-splat \
+    --load-config $CONFIG_FILE \
+    --output-dir "{{outputs.model_dir}}/splat" \
+    --obb-center 0 0 0 \
+    --obb-rotation 0 0 0
+
+    echo ".ply exported to {{outputs.model_dir}}/splat"
+
 {% else %}
-    echo "Errore: 'config.mode' non specificato per nerfstudio-commands"
+    echo "Error: 'config.mode' non specificato" && exit 1
 {% endif %}
 """
+
+# conda run --prefix {{env_path}} python scripts/nerfstudio_commands.py \
+# {% if config.mode == 'frame_extraction' %}
+#     --frame-extraction \
+#     --data-path "{{inputs.video_path}}" \
+#     --output-dir "{{outputs.image_dir}}" \
+#     --frame-count "{{config.frame_count | default(300)}}" \
+# {% elif config.mode == 'train_export' %}
+#     --data-path "{{inputs.image_dir}}" \
+#     --output-dir "{{outputs.model_dir}}" \
+#     --model "{{config.model | default('splatfacto')}}" \
+#     --max-num-iterations "{{config.max_iterations | default(30000)}}" \
+#     --num-downscales "{{config.num_downscales | default(8)}}" \
+#     {% if config.use_mcmc %}--use-mcmc{% endif %} \
+#     {% if config.advanced %}--advanced{% endif %} \
+#     {% if config.skip_colmap %}
+#         --skip-colmap \
+#         --colmap-model-path "{{inputs.colmap_dir}}"
+#     {% endif %}
+# {% else %}
+#     echo "Errore: 'config.mode' non specificato per nerfstudio-commands"
+# {% endif %}
+
 
 # Definiamo TUTTI gli input e output possibili
 [execution.inputs]

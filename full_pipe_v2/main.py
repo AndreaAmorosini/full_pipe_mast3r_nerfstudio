@@ -56,20 +56,20 @@ def run(
     setup_logging(level=logging.DEBUG if verbose else logging.INFO)
 
     try:
-        runner = PipelineRunner(config_file, METHODS_DIR)
+        override_args = {}
+        if input_file:
+            override_args["input_file"] = str(input_file)
+        if output_dir:
+            override_args["output_dir"] = str(output_dir)
+        if verbose:
+            override_args["verbose"] = True
+        if visualize:
+            override_args["visualize_rerun"] = True
+        
+        runner = PipelineRunner(config_file, METHODS_DIR, override_args=override_args)
 
         # Inietta la root del progetto nel context per trovare ./.envs
         runner.context.set("project_root", str(PROJECT_ROOT))
-
-        # Applica override
-        if input_file:
-            runner.context.set("input_file", str(input_file))
-        if output_dir:
-            runner.context.set("output_dir", str(output_dir))
-        if verbose:
-            runner.context.set("verbose", True)
-        if visualize:
-            runner.context.set("visualize_rerun", True)
 
         runner.execute()
         typer.secho(f"Pipeline completata con successo!", fg=typer.colors.GREEN)

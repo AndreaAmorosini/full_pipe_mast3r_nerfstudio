@@ -33,8 +33,11 @@ git_repos = [
 pip_packages = [
     "-r {{method_vendor_dir}}/mast3r/requirements.txt",
     "-r {{method_vendor_dir}}/mast3r/dust3r/requirements.txt",
-    "numpy<2.0.0",
     "pyaml",
+    "kapture",
+    "kapture-localization",
+    "numpy<2.0.0",
+
 ]
 
 # Comandi per compilare le estensioni C++/Cython necessarie (come asmk).
@@ -42,6 +45,10 @@ build_commands = [
     "git clone https://github.com/jenicek/asmk {{method_vendor_dir}}/mast3r/asmk",
     "python -m cython {{method_vendor_dir}}/mast3r/asmk/cython/*.pyx",
     "pip install {{method_vendor_dir}}/mast3r/asmk --no-build-isolation"
+]
+
+post_install_commands = [
+    "cp {{project_root}}/full_pipe_v2/helper_scripts/mast3r_glomap_cli.py {{method_vendor_dir}}/mast3r/mast3r_glomap_cli.py"
 ]
 
 [execution]

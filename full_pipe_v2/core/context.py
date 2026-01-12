@@ -8,8 +8,12 @@ class PipelineContext:
     Si occupa anche di creare le directory di output in modo strutturato.
     """
 
-    def __init__(self, initial_config: dict):
+    def __init__(self, initial_config: dict, override_args: dict = None):
         self.data = initial_config
+        if override_args["output_dir"]:
+            self.data["output_dir"] = override_args["output_dir"]
+        if override_args["input_file"]:
+            self.data["input_file"] = override_args["input_file"]
         self.output_dir = Path(self.data.get("output_dir", "outputs/default_run"))
         self.logger = logging.getLogger("PipelineContext")
         self.step_dirs = {}

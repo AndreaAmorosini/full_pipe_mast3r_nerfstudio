@@ -14,17 +14,20 @@ visualize_rerun = true
 # --- Step 1: Estrazione Frame ---
 # (Usa il manifest 'nerfstudio_commands' in modalità 'frame_extraction')
 [step.frame_extraction]
-method = "nerfstudio-commands"
+method = "nerfstudio_commands"
 # Passiamo 'config.mode' al template Jinja2 del manifest
 mode = "frame_extraction" 
 frame_count = 400
 # Definiamo gli input/output per questo step
-input_key = "input_file"      # Usa context.input_file (/data/video.mp4)
+primary_output = "image_dir"      # Usa context.input_file (/data/video.mp4)
 output_key = "image_dir"      # Salva il risultato in context.image_dir
+
+[step.frame_extraction.inputs]
+video_path = "{{ context.input_file }}"
 
 # --- Step 2: SfM con MASt3R ---
 [step.sfm]
-method = "mast3r_glomap"
+method = "mast3r_sfm"
 # Parametri specifici per questo tool
 winsize = 20
 shared_intrinsics = true
@@ -32,6 +35,9 @@ win_cyclic = true
 # Definiamo input/output
 input_key = "image_dir"       # Usa l'output dello step precedente
 output_key = "colmap_dir"     # Salva in context.colmap_dir
+
+[step.sfm.inputs]
+image_dir = "{{ context.image_dir }}/images"
 
 # --- Step 3: Training ed Export ---
 # (Usa *di nuovo* 'nerfstudio_commands', ma in un'altra modalità)
@@ -51,3 +57,7 @@ colmap_dir_key = "colmap_dir" # Passa il risultato di MASt3R
 output_key = "final_ply"      # Salva il percorso del .ply finale
 # Diciamo al runner quale output del manifest ci interessa
 primary_output = "final_ply"
+
+[step.train_and_export.inputs]
+image_dir = "{{ context.image_dir }}"
+colmap_dir = "{{ context.colmap_dir }}"
